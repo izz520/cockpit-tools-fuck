@@ -134,31 +134,40 @@ if (!bridgeAnyWindow.__TAURI_INTERNALS__) {
   };
 
   const pollEvents = async () => {
-    while (true) {
-      try {
-        const response = await fetch(
-          `/__cockpit_web__/events?clientId=${encodeURIComponent(eventClientId)}&after=${lastEventSequence}`,
-          {
-          method: 'GET',
-          headers: { accept: 'application/json' },
-          },
-        );
-        if (response.ok) {
-          const payload = (await response.json()) as WebEventPollResponse;
-          for (const event of payload.events ?? []) {
-            if (Number.isFinite(event.sequence)) {
-              lastEventSequence = Math.max(lastEventSequence, event.sequence);
+    try {
+      while (eventListeners.size > 0) {
+        try {
+          const response = await fetch(
+            `/__cockpit_web__/events?clientId=${encodeURIComponent(eventClientId)}&after=${lastEventSequence}`,
+            {
+              method: 'GET',
+              headers: { accept: 'application/json' },
+            },
+          );
+          if (response.ok) {
+            const payload = (await response.json()) as WebEventPollResponse;
+            for (const event of payload.events ?? []) {
+              if (Number.isFinite(event.sequence)) {
+                lastEventSequence = Math.max(lastEventSequence, event.sequence);
+              }
+              dispatchWebEvent(event);
             }
-            dispatchWebEvent(event);
+            if ((payload.events ?? []).length === 0 && typeof payload.latestSequence === 'number') {
+              lastEventSequence = Math.max(lastEventSequence, payload.latestSequence);
+            }
+          } else if (eventListeners.size > 0) {
+            await new Promise((resolve) => window.setTimeout(resolve, 1000));
           }
-          if ((payload.events ?? []).length === 0 && typeof payload.latestSequence === 'number') {
-            lastEventSequence = Math.max(lastEventSequence, payload.latestSequence);
+        } catch {
+          if (eventListeners.size > 0) {
+            await new Promise((resolve) => window.setTimeout(resolve, 1000));
           }
-        } else {
-          await new Promise((resolve) => window.setTimeout(resolve, 1000));
         }
-      } catch {
-        await new Promise((resolve) => window.setTimeout(resolve, 1000));
+      }
+    } finally {
+      eventPumpStarted = false;
+      if (eventListeners.size > 0) {
+        ensureEventPump();
       }
     }
   };

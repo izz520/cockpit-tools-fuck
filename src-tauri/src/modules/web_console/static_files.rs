@@ -4,11 +4,12 @@ use super::INDEX_HTML;
 
 pub(super) fn find_frontend_dist() -> Option<PathBuf> {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let candidates = [
-        manifest_dir.join("../dist"),
-        std::env::current_dir().ok()?.join("dist"),
-        std::env::current_dir().ok()?.join("../dist"),
-    ];
+    let mut candidates = vec![manifest_dir.join("../dist")];
+
+    if let Ok(current_dir) = std::env::current_dir() {
+        candidates.push(current_dir.join("dist"));
+        candidates.push(current_dir.join("../dist"));
+    }
 
     candidates
         .into_iter()
@@ -42,10 +43,26 @@ pub(super) fn resolve_static_path(root: &Path, request_path: &str) -> Result<Pat
         if segment.is_empty() {
             continue;
         }
-        if segment == "." || segment == ".." || segment.contains('\\') {
+        if segment == "."
+            || segment == ".."
+            || segment.contains('\\')
+            || (cfg!(windows) && segment.contains(':'))
+        {
             return Err("invalid static path".to_string());
         }
         result.push(segment);
+    }
+    if result.exists() {
+        let root = root
+            .canonicalize()
+            .map_err(|err| format!("invalid static root: {}", err))?;
+        let resolved = result
+            .canonicalize()
+            .map_err(|err| format!("invalid static path: {}", err))?;
+        if !resolved.starts_with(&root) {
+            return Err("static path escapes root".to_string());
+        }
+        return Ok(resolved);
     }
     Ok(result)
 }

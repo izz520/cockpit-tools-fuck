@@ -1227,6 +1227,7 @@ export function AccountsPage({ onNavigate }: AccountsPageProps) {
         setTimeout(() => {
           setShowAddModal(false)
           setAddStatus('idle')
+          addStatusRef.current = 'idle'
           setAddMessage('')
         }, 1200)
       } catch (e) {

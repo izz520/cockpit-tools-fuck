@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
@@ -19,6 +20,7 @@ struct HttpRequest {
     method: String,
     path: String,
     query: Option<String>,
+    headers: HashMap<String, String>,
     body: Vec<u8>,
 }
 
@@ -47,6 +49,16 @@ pub(super) async fn handle_connection(
     };
 
     if request.method == "OPTIONS" {
+        if !is_allowed_web_origin(&request) {
+            return write_response(
+                &mut stream,
+                403,
+                "Forbidden",
+                "text/plain; charset=utf-8",
+                b"forbidden origin",
+            )
+            .await;
+        }
         return write_response(
             &mut stream,
             204,
@@ -114,6 +126,27 @@ async fn handle_invoke_request(
     stream: &mut TcpStream,
     request: &HttpRequest,
 ) -> Result<(), String> {
+    if !is_json_content_type(header_value(request, "content-type")) {
+        return write_response(
+            stream,
+            415,
+            "Unsupported Media Type",
+            "application/json; charset=utf-8",
+            br#"{"ok":false,"error":"content-type must be application/json"}"#,
+        )
+        .await;
+    }
+    if !is_allowed_web_origin(request) {
+        return write_response(
+            stream,
+            403,
+            "Forbidden",
+            "application/json; charset=utf-8",
+            br#"{"ok":false,"error":"forbidden origin"}"#,
+        )
+        .await;
+    }
+
     let invoke: InvokeRequest =
         serde_json::from_slice(&request.body).map_err(|err| format!("invalid JSON: {}", err))?;
     let response = match dispatch_invoke(&invoke.cmd, &invoke.args).await {
@@ -190,6 +223,7 @@ async fn read_http_request(stream: &mut TcpStream) -> Result<Option<HttpRequest>
     let method = request_parts.next().unwrap_or("").to_string();
     let raw_path = request_parts.next().unwrap_or("/");
     let (path, query) = normalize_request_path(raw_path)?;
+    let mut headers = HashMap::new();
     let mut content_length = 0usize;
     for line in lines {
         if let Some((name, value)) = line.split_once(':') {
@@ -200,6 +234,7 @@ async fn read_http_request(stream: &mut TcpStream) -> Result<Option<HttpRequest>
                     .parse::<usize>()
                     .map_err(|_| "invalid content-length".to_string())?;
             }
+            headers.insert(name, value);
         }
     }
 
@@ -228,6 +263,7 @@ async fn read_http_request(stream: &mut TcpStream) -> Result<Option<HttpRequest>
         method,
         path,
         query,
+        headers,
         body,
     }))
 }
@@ -243,6 +279,46 @@ fn query_param(query: Option<&str>, name: &str) -> Option<String> {
     url::form_urlencoded::parse(query.as_bytes())
         .find(|(key, _)| key == name)
         .map(|(_, value)| value.into_owned())
+}
+
+fn header_value<'a>(request: &'a HttpRequest, name: &str) -> Option<&'a str> {
+    request
+        .headers
+        .get(&name.to_ascii_lowercase())
+        .map(String::as_str)
+}
+
+fn is_json_content_type(value: Option<&str>) -> bool {
+    value
+        .and_then(|item| item.split(';').next())
+        .map(|item| item.trim().eq_ignore_ascii_case("application/json"))
+        .unwrap_or(false)
+}
+
+fn is_allowed_web_origin(request: &HttpRequest) -> bool {
+    if let Some(origin) = header_value(request, "origin") {
+        return is_allowed_web_url(origin);
+    }
+
+    header_value(request, "referer")
+        .map(is_allowed_web_url)
+        .unwrap_or(false)
+}
+
+fn is_allowed_web_url(value: &str) -> bool {
+    let Ok(url) = Url::parse(value.trim()) else {
+        return false;
+    };
+    if url.scheme() != "http" {
+        return false;
+    }
+    let Some(host) = url.host_str() else {
+        return false;
+    };
+    if host != "127.0.0.1" && host != "localhost" {
+        return false;
+    }
+    url.port_or_known_default() == Some(get_actual_port().unwrap_or(DEFAULT_WEB_CONSOLE_PORT))
 }
 
 fn find_header_end(buffer: &[u8]) -> Option<usize> {
