@@ -2733,14 +2733,14 @@ fn launch_codex_via_store_app_user_model_id(
     let escaped = escape_powershell_single_quoted(app_user_model_id);
     let mut env_pairs = managed_proxy_env_pairs();
     if let Some(codex_home) = codex_home.map(str::trim).filter(|value| !value.is_empty()) {
-        env_pairs.push(("CODEX_HOME".to_string(), codex_home.to_string()));
+        env_pairs.push(("CODEX_HOME", codex_home.to_string()));
     }
     if let Some(app_user_data_dir) = app_user_data_dir
         .map(str::trim)
         .filter(|value| !value.is_empty())
     {
         env_pairs.push((
-            "CODEX_ELECTRON_USER_DATA_PATH".to_string(),
+            "CODEX_ELECTRON_USER_DATA_PATH",
             app_user_data_dir.to_string(),
         ));
     }
