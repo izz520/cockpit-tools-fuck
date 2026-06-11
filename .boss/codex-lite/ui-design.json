@@ -1,0 +1,368 @@
+{
+  "schemaVersion": "1.0.0",
+  "artifact": "ui-design",
+  "mode": "hifi",
+  "feature": "Codex Lite",
+  "updatedAt": "2026-06-11T00:00:00Z",
+  "tokens": {
+    "colors": {
+      "primary": "#0F766E",
+      "primaryHover": "#0D9488",
+      "primaryActive": "#115E59",
+      "primarySoft": "#CCFBF1",
+      "textStrong": "#111827",
+      "text": "#1F2937",
+      "textMuted": "#6B7280",
+      "border": "#E5E7EB",
+      "borderStrong": "#D1D5DB",
+      "background": "#F3F4F6",
+      "surface": "#FFFFFF",
+      "surfaceMuted": "#F9FAFB",
+      "success": "#059669",
+      "successSoft": "#D1FAE5",
+      "warning": "#D97706",
+      "warningSoft": "#FEF3C7",
+      "error": "#DC2626",
+      "errorSoft": "#FEE2E2",
+      "info": "#2563EB",
+      "infoSoft": "#DBEAFE"
+    },
+    "typography": {
+      "fontSans": "Inter, -apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, Microsoft YaHei, sans-serif",
+      "fontMono": "SF Mono, Cascadia Code, JetBrains Mono, monospace",
+      "pageTitle": { "fontSize": 22, "lineHeight": 30, "fontWeight": 650 },
+      "sectionTitle": { "fontSize": 16, "lineHeight": 24, "fontWeight": 650 },
+      "rowTitle": { "fontSize": 14, "lineHeight": 20, "fontWeight": 600 },
+      "body": { "fontSize": 14, "lineHeight": 20, "fontWeight": 400 },
+      "caption": { "fontSize": 12, "lineHeight": 16, "fontWeight": 400 },
+      "mono": { "fontSize": 12, "lineHeight": 18, "fontWeight": 400 }
+    },
+    "spacing": {
+      "1": 4,
+      "2": 8,
+      "3": 12,
+      "4": 16,
+      "5": 20,
+      "6": 24,
+      "8": 32
+    },
+    "radius": {
+      "sm": 4,
+      "md": 6,
+      "lg": 8,
+      "full": 999
+    },
+    "shadow": {
+      "popover": "0 10px 24px rgba(15,23,42,0.12)",
+      "modal": "0 20px 48px rgba(15,23,42,0.22)"
+    }
+  },
+  "pages": [
+    {
+      "id": "accounts",
+      "name": "Accounts",
+      "route": "/",
+      "viewport": { "width": 1180, "height": 760 },
+      "frames": [
+        {
+          "id": "app-shell",
+          "type": "shell",
+          "name": "Desktop App Shell",
+          "layout": "horizontal",
+          "style": {
+            "background": "background",
+            "minWidth": 900,
+            "minHeight": 620
+          },
+          "children": [
+            {
+              "id": "sidebar-nav",
+              "type": "navigation",
+              "name": "Icon Navigation",
+              "layout": "vertical",
+              "style": {
+                "width": 72,
+                "background": "surface",
+                "borderRight": "1px solid border"
+              },
+              "children": [
+                { "id": "nav-accounts", "type": "navItem", "icon": "Users", "label": "Accounts", "active": true },
+                { "id": "nav-import", "type": "navItem", "icon": "Upload", "label": "Import" },
+                { "id": "nav-settings", "type": "navItem", "icon": "Settings", "label": "Settings" },
+                { "id": "nav-logs", "type": "navItem", "icon": "FileText", "label": "Logs" }
+              ]
+            },
+            {
+              "id": "main-region",
+              "type": "region",
+              "name": "Accounts Main Region",
+              "layout": "vertical",
+              "style": {
+                "flex": 1,
+                "minWidth": 0
+              },
+              "children": [
+                {
+                  "id": "topbar",
+                  "type": "toolbar",
+                  "name": "Top Bar",
+                  "layout": "horizontal",
+                  "style": {
+                    "height": 56,
+                    "padding": "0 20px",
+                    "background": "surface",
+                    "borderBottom": "1px solid border",
+                    "justifyContent": "space-between",
+                    "alignItems": "center"
+                  },
+                  "children": [
+                    { "id": "page-title", "type": "text", "textStyle": "pageTitle", "content": "Codex accounts" },
+                    {
+                      "id": "topbar-actions",
+                      "type": "buttonGroup",
+                      "layout": "horizontal",
+                      "children": [
+                        { "id": "refresh-all", "type": "iconButton", "icon": "RefreshCw", "tooltip": "Refresh all quotas" },
+                        { "id": "import-account", "type": "button", "variant": "primary", "icon": "Upload", "label": "Import Account" }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "accounts-content",
+                  "type": "splitPane",
+                  "name": "Accounts Content",
+                  "layout": "horizontal",
+                  "style": {
+                    "flex": 1,
+                    "padding": 16,
+                    "gap": 16,
+                    "minHeight": 0
+                  },
+                  "children": [
+                    {
+                      "id": "accounts-left-pane",
+                      "type": "panel",
+                      "name": "Account List Pane",
+                      "layout": "vertical",
+                      "style": {
+                        "width": 420,
+                        "minWidth": 360,
+                        "background": "surface",
+                        "border": "1px solid border",
+                        "borderRadius": "lg",
+                        "overflow": "hidden"
+                      },
+                      "children": [
+                        { "id": "current-summary", "type": "currentAccountSummary" },
+                        { "id": "account-tools", "type": "accountToolbar", "children": ["search", "filter", "sort"] },
+                        { "id": "account-list", "type": "accountList", "itemComponent": "AccountRow" }
+                      ]
+                    },
+                    {
+                      "id": "accounts-right-pane",
+                      "type": "panel",
+                      "name": "Account Detail Pane",
+                      "layout": "vertical",
+                      "style": {
+                        "flex": 1,
+                        "minWidth": 0,
+                        "background": "surface",
+                        "border": "1px solid border",
+                        "borderRadius": "lg",
+                        "overflow": "hidden"
+                      },
+                      "children": [
+                        { "id": "account-detail", "type": "accountDetail", "component": "AccountDetail" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "states": [
+        { "id": "loading", "description": "Skeleton rows in account list and detail pane" },
+        { "id": "empty", "description": "No accounts, show import call to action" },
+        { "id": "path-error", "description": "Top error banner with settings action" }
+      ]
+    },
+    {
+      "id": "settings",
+      "name": "Settings",
+      "route": "/settings",
+      "viewport": { "width": 1180, "height": 760 },
+      "frames": [
+        {
+          "id": "settings-page",
+          "type": "page",
+          "layout": "vertical",
+          "children": [
+            { "id": "settings-header", "type": "pageHeader", "title": "Settings" },
+            { "id": "codex-paths-section", "type": "settingsSection", "title": "Codex paths" },
+            { "id": "app-behavior-section", "type": "settingsSection", "title": "App behavior" },
+            { "id": "data-privacy-section", "type": "settingsSection", "title": "Data and privacy" }
+          ]
+        }
+      ],
+      "states": []
+    },
+    {
+      "id": "logs",
+      "name": "Logs",
+      "route": "/logs",
+      "viewport": { "width": 1180, "height": 760 },
+      "frames": [
+        {
+          "id": "logs-page",
+          "type": "page",
+          "layout": "vertical",
+          "children": [
+            { "id": "logs-toolbar", "type": "toolbar", "actions": ["Refresh", "Open log directory"], "filters": ["All", "Error", "Warn", "Info"] },
+            { "id": "logs-viewer", "type": "logViewer", "font": "mono", "redactionRequired": true }
+          ]
+        }
+      ],
+      "states": [
+        { "id": "empty", "description": "No log entries yet" },
+        { "id": "loading", "description": "Loading recent log snapshot" }
+      ]
+    }
+  ],
+  "components": [
+    {
+      "id": "AccountRow",
+      "type": "component",
+      "description": "Stable-height row for account list",
+      "dimensions": { "height": 88, "minWidth": 320 },
+      "states": ["default", "hover", "selected", "current", "error", "quotaRefreshing"],
+      "slots": ["avatar", "displayName", "email", "badges", "hourlyQuota", "weeklyQuota", "resetText"],
+      "accessibility": {
+        "role": "button",
+        "keyboard": ["Enter selects row", "ArrowUp/ArrowDown moves list selection"],
+        "notes": "Current account must include visible text badge, not color only."
+      }
+    },
+    {
+      "id": "QuotaMeter",
+      "type": "component",
+      "description": "Compact percentage meter for Hourly and Weekly quota",
+      "dimensions": { "height": 6 },
+      "states": ["success", "warning", "error", "unknown", "stale"],
+      "rules": [
+        "success >= 40%",
+        "warning 15%-39%",
+        "error < 15%",
+        "always render text percentage near the meter"
+      ]
+    },
+    {
+      "id": "AccountDetail",
+      "type": "component",
+      "description": "Right pane for selected account",
+      "sections": ["header", "quotaOverview", "credentialSummary", "actions", "diagnostics"],
+      "primaryAction": "Switch",
+      "dangerAction": "Delete account"
+    },
+    {
+      "id": "ImportDrawer",
+      "type": "component",
+      "description": "Right-side drawer for all import methods",
+      "dimensions": { "width": 480 },
+      "steps": ["chooseSource", "provideInput", "preview", "result"],
+      "sources": ["local", "jsonFile", "batchFiles", "oauth", "token", "apiKey"],
+      "states": ["idle", "validating", "importing", "success", "partialFailure", "failed"],
+      "accessibility": {
+        "focusTrap": true,
+        "escapeCloses": true,
+        "returnFocusOnClose": true
+      }
+    },
+    {
+      "id": "ConfirmSwitchModal",
+      "type": "component",
+      "description": "Confirmation modal before overwriting local Codex auth",
+      "dimensions": { "maxWidth": 480 },
+      "content": ["fromAccount", "toAccount", "backupExplanation"],
+      "actions": ["Cancel", "Switch"],
+      "states": ["ready", "switching", "blocked"]
+    },
+    {
+      "id": "ErrorBanner",
+      "type": "component",
+      "description": "Persistent blocking error display",
+      "variants": ["error", "warning", "info"],
+      "slots": ["icon", "title", "message", "actions"],
+      "accessibility": {
+        "role": "alert"
+      }
+    },
+    {
+      "id": "Button",
+      "type": "primitive",
+      "variants": ["primary", "secondary", "ghost", "danger"],
+      "sizes": {
+        "sm": { "height": 32, "fontSize": 13 },
+        "md": { "height": 36, "fontSize": 14 },
+        "lg": { "height": 40, "fontSize": 14 }
+      },
+      "states": ["default", "hover", "active", "focus", "disabled", "loading"]
+    },
+    {
+      "id": "IconButton",
+      "type": "primitive",
+      "dimensions": { "sm": 32, "md": 36, "lg": 40 },
+      "requiresTooltip": true,
+      "iconLibrary": "lucide-react"
+    }
+  ],
+  "prototype": {
+    "startPageId": "accounts",
+    "links": [
+      { "from": "import-account", "to": "ImportDrawer", "interaction": "openDrawer" },
+      { "from": "refresh-all", "to": "account-list", "interaction": "refreshAllQuotas" },
+      { "from": "nav-settings", "to": "settings", "interaction": "navigate" },
+      { "from": "nav-logs", "to": "logs", "interaction": "navigate" },
+      { "from": "AccountRow", "to": "AccountDetail", "interaction": "selectAccount" },
+      { "from": "AccountDetail.primaryAction", "to": "ConfirmSwitchModal", "interaction": "openModal" }
+    ]
+  },
+  "implementationHints": {
+    "preferredFramework": "react",
+    "stateManagement": "zustand",
+    "iconLibrary": "lucide-react",
+    "requiredComponents": [
+      "AppShell",
+      "AccountRow",
+      "QuotaMeter",
+      "AccountDetail",
+      "ImportDrawer",
+      "BatchImportPreviewTable",
+      "ConfirmSwitchModal",
+      "ErrorBanner",
+      "SettingsForm",
+      "LogsViewer"
+    ],
+    "accessibilityNotes": [
+      "All icon-only buttons require aria-label and tooltip.",
+      "Current account state must be represented by text and not color alone.",
+      "Quota meters must display numeric percentages.",
+      "Drawer and modal must trap focus and restore focus on close.",
+      "Toast messages should use aria-live=polite; blocking errors should use role=alert."
+    ],
+    "layoutNotes": [
+      "Do not create a landing page or hero section.",
+      "Do not add advertising, sponsor, announcement, or promotional modules.",
+      "Do not use nested cards; repeated account rows may be card-like items.",
+      "Keep panel radius at 8px or less.",
+      "Use stable row heights so quota refresh does not shift layout."
+    ],
+    "responsiveNotes": [
+      "Minimum desktop window is 900x620.",
+      "Below 960px, account detail moves below list or opens as drawer.",
+      "Below 720px, sidebar becomes top segmented navigation."
+    ]
+  }
+}

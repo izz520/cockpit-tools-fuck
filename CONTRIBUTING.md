@@ -1,102 +1,63 @@
-# Contributing to Cockpit Tools
+# Contributing
 
-Thank you for your interest in contributing to Cockpit Tools! This project aims to be the universal manager for AI IDEs, and we welcome contributions of all kinds.
+Thanks for considering a contribution. Codex Lite is intended to stay small, local-first, ad-free, and easy to inspect.
 
-## 🚀 Getting Started
+## Scope
 
-1.  **Fork** the repository on GitHub.
-2.  **Clone** your fork locally:
-    ```bash
-    git clone https://github.com/YOUR_USERNAME/cockpit-tools.git
-    ```
-3.  **Create a branch** for your feature or bug fix:
-    ```bash
-    git checkout -b feature/my-cool-feature
-    ```
+This repository currently contains the `codex-lite` desktop app. Please keep changes focused on that project unless a maintainer asks for repository-wide work.
 
-## 🛠️ Project Structure
+Good contributions include:
 
-This project is a Cargo Workspace:
-- `crates/cockpit-core`: Shared business logic (Library).
-- `src-tauri`: The GUI application (Tauri + React).
-- `crates/cockpit-cli`: The command-line interface.
+- Bug fixes with clear reproduction steps.
+- Small UX improvements that keep the app lightweight.
+- Tests or smoke coverage for existing behavior.
+- Documentation that helps users run, recover, or secure local data.
+- Platform validation notes for macOS, Windows, and Linux.
 
-## 📝 Coding Standards
+Please avoid:
 
-- **Rust:** Follow standard Rust idioms. Run `cargo fmt` before committing.
-- **Frontend:** We use React 19 and Tailwind CSS. Use functional components and hooks.
-- **Commits:** Use clear, descriptive commit messages.
+- Ads, telemetry, sponsor modules, or hosted account services.
+- Uploading real tokens, API keys, logs, or auth files.
+- Large rewrites without prior discussion.
+- New dependencies without a clear reason.
 
-## 🧪 Testing
+## Development
 
-- **GUI:** `npm run tauri dev`
-- **CLI:** `cargo run --package cockpit-cli -- <commands>`
-- **Core:** `cargo test --package cockpit-core`
+Use pnpm for JavaScript commands:
 
-## 📬 Submitting a Pull Request
+```bash
+cd codex-lite
+pnpm install
+pnpm typecheck
+pnpm smoke
+```
 
-1.  Push your changes to your fork.
-2.  Open a Pull Request against the `main` branch.
-3.  Provide a clear description of the changes and link any related issues.
-4.  Be prepared to iterate based on feedback!
+Rust checks:
 
-## 📜 Code of Conduct
+```bash
+cd codex-lite/src-tauri
+cargo fmt --check
+cargo check
+cargo test
+```
 
-Please be respectful and professional in all interactions. We follow the [Contributor Covenant](https://www.contributor-covenant.org/).
+Native dev app:
 
----
+```bash
+cd codex-lite
+pnpm tauri:dev
+```
 
-## 📋 Additional Project Specifications
+## Pull Requests
 
-### TypeScript Configuration
+Before opening a pull request:
 
-- **Strict mode** enabled (`strict: true`)
-- **No unused locals** (`noUnusedLocals: true`)
-- **No unused parameters** (`noUnusedParameters: true`)
-- **No fallthrough cases in switch** (`noFallthroughCasesInSwitch: true`)
-- Target: ES2020, JSX: react-jsx
+- Describe the user-facing change.
+- List validation commands and results.
+- Mention any skipped validation.
+- Confirm no real credentials or private logs are included.
+- Keep the diff scoped to the issue being solved.
 
-### Build & Development
+## Security
 
-| Command | Description |
-|---------|-------------|
-| `npm run tauri dev` | Start development server (port 1420) |
-| `npm run typecheck` | Run TypeScript type checking (auto-runs before build) |
-| `npm run build` | Build frontend (syncs version + typecheck + vite build) |
-| `npm run sync-version` | Sync `package.json` version to Tauri config |
-| `npm run release:preflight` | Run full release pre-check (locales + typecheck + build + cargo check) |
-
-### State Management & i18n
-
-- **State management:** Zustand
-- **Internationalization:** i18next + react-i18next (supports 18 languages)
-- **UI framework:** Tailwind CSS + DaisyUI
-
-### Release Process Summary
-
-1. Update version in `package.json` + CHANGELOG (Chinese & English)
-2. Run `npm run sync-version` → `npm run release:preflight`
-3. Commit → Tag (e.g., `v0.22.20`) → Push branch and tag
-4. CI auto-builds macOS (universal) + Windows + Linux → Generates SHA256 → Updates Homebrew Cask
-
-### Release Targets
-
-- **macOS, Windows, and Linux**
-- macOS recommended: `universal.dmg` (compatible with both Intel and Apple Silicon)
-- Linux packages: `.AppImage`, `.deb`, and `.rpm`
-- Each release includes `SHA256SUMS.txt` for integrity verification
-
-### Branch Strategy
-
-- **Main branch:** `main`
-- **PR target:** `main`
-- **Release tag format:** `v<major>.<minor>.<patch>`
-
-### Related Specification Files
-
-| File | Content |
-|------|---------|
-| `docs/release-process.md` | Detailed release process documentation |
-| `tsconfig.json` | TypeScript strict compilation rules |
-| `.github/workflows/release.yml` | CI/CD release automation |
-| `SECURITY.md` | Security policy |
+Read `codex-lite/docs/security.md` before sharing logs or fixtures. If you believe a credential exposure or security issue exists, do not post real secrets in a public issue.

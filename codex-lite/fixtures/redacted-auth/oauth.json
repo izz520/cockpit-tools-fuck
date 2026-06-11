@@ -1,0 +1,10 @@
+{
+  "authMode": "oauth",
+  "tokens": {
+    "idToken": "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJlbWFpbCI6ImZpeHR1cmUub2F1dGhAZXhhbXBsZS50ZXN0Iiwic3ViIjoidXNlcl9maXh0dXJlXzEyMyJ9.Zml4dHVyZS1zaWduYXR1cmU",
+    "accessToken": "fixture-access-token-redacted",
+    "refreshToken": "fixture-refresh-token-redacted",
+    "accountId": "acct_fixture_redacted"
+  },
+  "lastRefresh": 1710000000
+}

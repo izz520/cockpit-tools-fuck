@@ -1,0 +1,6 @@
+{
+  "authMode": "apikey",
+  "OPENAI_API_KEY": "sk-fixture-redacted-not-real",
+  "baseUrl": "https://api.openai.com/v1",
+  "lastRefresh": 1710000000
+}

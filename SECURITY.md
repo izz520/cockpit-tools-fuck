@@ -1,21 +1,27 @@
 # Security Policy
 
+Codex Lite handles local Codex credentials. Treat account files, app data,
+backups, and logs as sensitive.
+
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
-
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+Codex Lite is still in early local testing. Until the first public release,
+security fixes are handled on the main development line.
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+Do not open a public issue that contains real credentials, OAuth callback URLs,
+tokens, API keys, raw `auth.json`, raw `accounts.json`, backup files, or
+unreviewed logs.
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+If a private report path is available, use it. Otherwise, open a public issue
+with only:
+
+- Operating system.
+- Codex Lite version or commit.
+- Affected feature.
+- High-level impact.
+- Redacted reproduction steps.
+
+For the current local credential boundary and what not to share, see
+[`codex-lite/docs/security.md`](./codex-lite/docs/security.md).
