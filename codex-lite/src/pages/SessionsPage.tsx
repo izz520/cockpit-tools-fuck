@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Archive, CheckCircle2, ChevronDown, ChevronRight, EyeOff, Folder, RefreshCw, RotateCcw, Search, Trash2 } from 'lucide-react';
+import { Archive, CheckCircle2, CheckSquare, ChevronDown, ChevronRight, EyeOff, Folder, RefreshCw, RotateCcw, Search, Trash2 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { useCodexSessionsStore } from '../stores/useCodexSessionsStore';
@@ -176,6 +176,14 @@ export function SessionsPage() {
             </Button>
             <Button
               variant="secondary"
+              icon={<CheckSquare size={16} />}
+              disabled={filteredSessions.length === 0}
+              onClick={toggleFilteredSelection}
+            >
+              {allFilteredSelected ? '取消全选' : '全选'}
+            </Button>
+            <Button
+              variant="secondary"
               icon={<RotateCcw size={16} />}
               loading={restoring}
               disabled={selectedCount === 0}
@@ -200,7 +208,8 @@ export function SessionsPage() {
           {loading ? <div className="sessions-empty">正在加载会话...</div> : null}
           {groups.map((group) => {
             const collapsed = collapsedGroupSet.has(group.key);
-            const groupSelected = group.sessions.every((session) => selectedSet.has(session.id));
+            const selectedInGroup = group.sessions.filter((session) => selectedSet.has(session.id)).length;
+            const groupSelected = selectedInGroup === group.sessions.length;
             const groupVisibleCount = group.sessions.filter((session) => session.visible).length;
             return (
               <section className="session-group" key={group.key}>
@@ -218,15 +227,7 @@ export function SessionsPage() {
                   <div className="session-group-meta">
                     <span>{group.sessions.length} 个会话</span>
                     <span>{groupVisibleCount} 个可见</span>
-                    <label className="session-group-select">
-                      <input
-                        aria-label={`Select sessions in ${group.project}`}
-                        checked={groupSelected}
-                        type="checkbox"
-                        onChange={() => toggleGroupSelection(group)}
-                      />
-                      选择项目
-                    </label>
+                    {selectedInGroup > 0 ? <span className="session-group-selected-count">{selectedInGroup} 个已选</span> : null}
                   </div>
                 </div>
                 {!collapsed ? (

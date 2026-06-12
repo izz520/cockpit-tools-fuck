@@ -197,17 +197,9 @@
   background: oklch(0.965 0.012 245);
 }
 
-.session-group-select {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 24px;
+.session-group-meta .session-group-selected-count {
+  background: var(--color-primary-soft);
   color: var(--color-primary-active);
-  font-weight: 800;
-}
-
-.session-group-select input {
-  accent-color: var(--color-primary);
 }
 
 .sessions-table-panel {
