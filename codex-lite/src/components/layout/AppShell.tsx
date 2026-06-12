@@ -31,6 +31,7 @@ export function AppShell({ page, setPage, children }: AppShellProps) {
           <span className="nav-section-label">平台</span>
           <button
             className={`nav-button ${page === 'accounts' ? 'active' : ''}`}
+            aria-label="Codex"
             title="Accounts"
             onClick={() => setPage('accounts')}
           >
@@ -39,23 +40,23 @@ export function AppShell({ page, setPage, children }: AppShellProps) {
             </span>
             <span>Codex</span>
           </button>
-          <button className="nav-button nav-button-muted" title="Claude" disabled>
+          <button className="nav-button nav-button-muted" aria-label="Claude" title="Claude" disabled>
             <span className="nav-icon nav-icon-claude">AI</span>
             <span>Claude</span>
           </button>
-          <button className="nav-button nav-button-muted" title="Gemini" disabled>
+          <button className="nav-button nav-button-muted" aria-label="Gemini" title="Gemini" disabled>
             <span className="nav-icon nav-icon-gemini">
               <Sparkles size={19} />
             </span>
             <span>Gemini</span>
           </button>
-          <button className="nav-button nav-button-muted" title="Automation" disabled>
+          <button className="nav-button nav-button-muted" aria-label="Automation" title="Automation" disabled>
             <span className="nav-icon nav-icon-auto">
               <Bot size={19} />
             </span>
             <span>Automation</span>
           </button>
-          <button className="nav-button nav-button-muted" title="Tools" disabled>
+          <button className="nav-button nav-button-muted" aria-label="Tools" title="Tools" disabled>
             <span className="nav-icon nav-icon-tools">
               <Wand2 size={19} />
             </span>
@@ -66,6 +67,7 @@ export function AppShell({ page, setPage, children }: AppShellProps) {
         <div className="nav-footer">
           <button
             className={`nav-button ${page === 'logs' ? 'active' : ''}`}
+            aria-label="Logs"
             title="Logs"
             onClick={() => setPage('logs')}
           >
@@ -76,6 +78,7 @@ export function AppShell({ page, setPage, children }: AppShellProps) {
           </button>
           <button
             className={`nav-button ${page === 'settings' ? 'active' : ''}`}
+            aria-label="Settings"
             title="Settings"
             onClick={() => setPage('settings')}
           >
