@@ -1,8 +1,8 @@
-import { Bot, FileText, MessageCircle, Settings, Sparkles, Users, Wand2 } from 'lucide-react';
+import { Bot, FileText, History, MessageCircle, Settings, Sparkles, Users, Wand2 } from 'lucide-react';
 import { type PointerEvent, type ReactNode } from 'react';
 import { startWindowDragging } from '../../services/windowService';
 
-type Page = 'accounts' | 'settings' | 'logs';
+type Page = 'accounts' | 'sessions' | 'settings' | 'logs';
 
 interface AppShellProps {
   page: Page;
@@ -62,6 +62,17 @@ export function AppShell({ page, setPage, children }: AppShellProps) {
             </span>
             <span>Tools</span>
           </button>
+          <button
+            className={`nav-button ${page === 'sessions' ? 'active' : ''}`}
+            aria-label="Sessions"
+            title="Sessions"
+            onClick={() => setPage('sessions')}
+          >
+            <span className="nav-icon">
+              <History size={19} />
+            </span>
+            <span>会话</span>
+          </button>
         </div>
 
         <div className="nav-footer">
@@ -93,7 +104,9 @@ export function AppShell({ page, setPage, children }: AppShellProps) {
         <header className="topbar" data-tauri-drag-region onPointerDown={handleTopbarPointerDown}>
           <div className="topbar-title-group">
             <MessageCircle size={18} aria-hidden="true" />
-            <h1 className="page-title">{page === 'accounts' ? 'AI Accounts' : page === 'settings' ? 'Settings' : 'Logs'}</h1>
+            <h1 className="page-title">
+              {page === 'accounts' ? 'AI Accounts' : page === 'sessions' ? 'Sessions' : page === 'settings' ? 'Settings' : 'Logs'}
+            </h1>
           </div>
         </header>
         {children}

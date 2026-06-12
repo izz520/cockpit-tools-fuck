@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -9,13 +9,200 @@ use serde_json::Value as JsonValue;
 
 use crate::infra::{atomic_write, paths};
 use crate::models::error::{AppError, AppResult};
+use crate::models::session::{CodexSessionView, SessionMutationResult};
+use crate::services::codex_config_service;
 
 const STATE_DB_FILE: &str = "state_5.sqlite";
+const SESSION_INDEX_FILE: &str = "session_index.jsonl";
 const SESSION_DIRS: [&str; 2] = ["sessions", "archived_sessions"];
+
+#[derive(Debug, Clone)]
+struct RolloutSessionMeta {
+    id: String,
+    provider: String,
+    title: Option<String>,
+    cwd: Option<String>,
+    rollout_path: PathBuf,
+    archived: bool,
+    updated_at: Option<i64>,
+}
+
+#[derive(Debug, Clone)]
+struct SqliteSessionRow {
+    id: String,
+    title: String,
+    cwd: String,
+    provider: String,
+    archived: bool,
+    updated_at: Option<i64>,
+    created_at: Option<i64>,
+    rollout_path: Option<String>,
+    preview: Option<String>,
+}
 
 pub fn repair_default_codex_home_for_provider(target_provider: &str) -> AppResult<()> {
     let codex_home = paths::default_codex_home()?;
     repair_codex_home_for_provider(&codex_home, target_provider)
+}
+
+pub fn list_default_codex_sessions() -> AppResult<Vec<CodexSessionView>> {
+    let codex_home = paths::default_codex_home()?;
+    let target_provider = current_target_provider()?;
+    list_codex_sessions(&codex_home, &target_provider)
+}
+
+pub fn restore_default_codex_sessions_visibility(
+    session_ids: Vec<String>,
+) -> AppResult<SessionMutationResult> {
+    let codex_home = paths::default_codex_home()?;
+    let target_provider = current_target_provider()?;
+    restore_sessions_visibility(&codex_home, &target_provider, &session_ids)
+}
+
+pub fn delete_default_codex_sessions(session_ids: Vec<String>) -> AppResult<SessionMutationResult> {
+    let codex_home = paths::default_codex_home()?;
+    delete_sessions(&codex_home, &session_ids)
+}
+
+fn current_target_provider() -> AppResult<String> {
+    codex_config_service::read_active_provider(&paths::default_codex_config_file()?)
+}
+
+fn list_codex_sessions(
+    codex_home: &Path,
+    target_provider: &str,
+) -> AppResult<Vec<CodexSessionView>> {
+    let mut sessions = BTreeMap::<String, CodexSessionView>::new();
+
+    for meta in read_rollout_session_metas(codex_home)? {
+        let title = meta
+            .title
+            .clone()
+            .unwrap_or_else(|| display_title_from_id(&meta.id));
+        let cwd = meta.cwd.clone().unwrap_or_default();
+        sessions.insert(
+            meta.id.clone(),
+            CodexSessionView {
+                id: meta.id,
+                title,
+                project: project_name(&cwd),
+                cwd,
+                provider: meta.provider,
+                target_provider: target_provider.to_string(),
+                visible: false,
+                archived: meta.archived,
+                updated_at: meta.updated_at,
+                created_at: None,
+                rollout_path: Some(meta.rollout_path.display().to_string()),
+                preview: None,
+            },
+        );
+    }
+
+    for row in read_sqlite_session_rows(codex_home)? {
+        let rollout_path = row
+            .rollout_path
+            .clone()
+            .filter(|value| !value.trim().is_empty());
+        let title = if row.title.trim().is_empty() {
+            display_title_from_id(&row.id)
+        } else {
+            row.title.clone()
+        };
+        sessions
+            .entry(row.id.clone())
+            .and_modify(|session| {
+                session.title = title.clone();
+                session.cwd = row.cwd.clone();
+                session.project = project_name(&row.cwd);
+                session.provider = row.provider.clone();
+                session.visible = row.provider == target_provider;
+                session.archived = row.archived;
+                session.updated_at = row.updated_at.or(session.updated_at);
+                session.created_at = row.created_at;
+                session.rollout_path = rollout_path
+                    .clone()
+                    .or_else(|| session.rollout_path.clone());
+                session.preview = row.preview.clone();
+            })
+            .or_insert_with(|| CodexSessionView {
+                id: row.id,
+                title,
+                project: project_name(&row.cwd),
+                cwd: row.cwd,
+                provider: row.provider.clone(),
+                target_provider: target_provider.to_string(),
+                visible: row.provider == target_provider,
+                archived: row.archived,
+                updated_at: row.updated_at,
+                created_at: row.created_at,
+                rollout_path,
+                preview: row.preview,
+            });
+    }
+
+    let mut result = sessions.into_values().collect::<Vec<_>>();
+    result.sort_by(|left, right| {
+        right
+            .updated_at
+            .unwrap_or(0)
+            .cmp(&left.updated_at.unwrap_or(0))
+            .then_with(|| left.title.cmp(&right.title))
+    });
+    Ok(result)
+}
+
+fn restore_sessions_visibility(
+    codex_home: &Path,
+    target_provider: &str,
+    session_ids: &[String],
+) -> AppResult<SessionMutationResult> {
+    let selected_ids = normalized_id_set(session_ids)?;
+    let mut updated_count =
+        update_sqlite_selected_threads_provider(codex_home, target_provider, &selected_ids)?;
+
+    for meta in read_rollout_session_metas(codex_home)? {
+        if selected_ids.contains(&meta.id) {
+            rewrite_rollout_provider(&meta.rollout_path, target_provider)?;
+            updated_count += 1;
+        }
+    }
+
+    Ok(SessionMutationResult {
+        updated_count,
+        deleted_count: 0,
+    })
+}
+
+fn delete_sessions(codex_home: &Path, session_ids: &[String]) -> AppResult<SessionMutationResult> {
+    let selected_ids = normalized_id_set(session_ids)?;
+    let mut deleted_count = delete_sqlite_sessions(codex_home, &selected_ids)?;
+
+    for meta in read_rollout_session_metas(codex_home)? {
+        if selected_ids.contains(&meta.id) {
+            match fs::remove_file(&meta.rollout_path) {
+                Ok(()) => deleted_count += 1,
+                Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
+                Err(err) => {
+                    return Err(AppError::new(
+                        "CODEX_SESSION_DELETE_FAILED",
+                        format!(
+                            "Failed to delete Codex rollout {}: {}",
+                            meta.rollout_path.display(),
+                            err
+                        ),
+                        "Close Codex and try deleting the session again.",
+                    ));
+                }
+            }
+        }
+    }
+    remove_session_index_entries(codex_home, &selected_ids)?;
+
+    Ok(SessionMutationResult {
+        updated_count: 0,
+        deleted_count,
+    })
 }
 
 fn repair_codex_home_for_provider(codex_home: &Path, target_provider: &str) -> AppResult<()> {
@@ -34,6 +221,67 @@ fn repair_codex_home_for_provider(codex_home: &Path, target_provider: &str) -> A
 
     update_sqlite_threads_provider(codex_home, target_provider)?;
     Ok(())
+}
+
+fn read_rollout_session_metas(codex_home: &Path) -> AppResult<Vec<RolloutSessionMeta>> {
+    let mut result = Vec::new();
+    for rollout_path in list_rollout_files(codex_home)? {
+        let Some(first_line) = read_first_line(&rollout_path)? else {
+            continue;
+        };
+        let Some(mut meta) = parse_rollout_session_meta(&first_line, rollout_path.clone())? else {
+            continue;
+        };
+        meta.archived = rollout_path
+            .strip_prefix(codex_home)
+            .ok()
+            .and_then(|relative| relative.components().next())
+            .and_then(|component| component.as_os_str().to_str())
+            == Some("archived_sessions");
+        result.push(meta);
+    }
+    Ok(result)
+}
+
+fn parse_rollout_session_meta(
+    first_line: &str,
+    rollout_path: PathBuf,
+) -> AppResult<Option<RolloutSessionMeta>> {
+    let parsed: JsonValue = match serde_json::from_str(first_line) {
+        Ok(value) => value,
+        Err(_) => return Ok(None),
+    };
+    if parsed.get("type").and_then(JsonValue::as_str) != Some("session_meta") {
+        return Ok(None);
+    }
+    let Some(payload) = parsed.get("payload") else {
+        return Ok(None);
+    };
+    let Some(id) = payload.get("id").and_then(JsonValue::as_str) else {
+        return Ok(None);
+    };
+    let updated_at = rollout_modified_at_ms(payload).or_else(|| file_modified_at_ms(&rollout_path));
+    Ok(Some(RolloutSessionMeta {
+        id: id.to_string(),
+        provider: payload
+            .get("model_provider")
+            .and_then(JsonValue::as_str)
+            .unwrap_or("")
+            .to_string(),
+        title: payload
+            .get("thread_name")
+            .or_else(|| payload.get("title"))
+            .and_then(JsonValue::as_str)
+            .map(ToString::to_string),
+        cwd: payload
+            .get("cwd")
+            .or_else(|| payload.get("workspace_root"))
+            .and_then(JsonValue::as_str)
+            .map(ToString::to_string),
+        rollout_path,
+        archived: false,
+        updated_at,
+    }))
 }
 
 fn list_rollout_files(codex_home: &Path) -> AppResult<Vec<PathBuf>> {
@@ -333,6 +581,327 @@ fn read_threads_columns(connection: &Connection) -> AppResult<HashSet<String>> {
         })?);
     }
     Ok(columns)
+}
+
+fn open_state_connection(codex_home: &Path) -> AppResult<Option<Connection>> {
+    let db_path = codex_home.join(STATE_DB_FILE);
+    if !db_path.exists() {
+        return Ok(None);
+    }
+    let connection = Connection::open(&db_path).map_err(|err| {
+        AppError::new(
+            "CODEX_STATE_DB_OPEN_FAILED",
+            format!(
+                "Failed to open Codex state database {}: {}",
+                db_path.display(),
+                err
+            ),
+            "Close Codex and try again.",
+        )
+    })?;
+    connection
+        .busy_timeout(std::time::Duration::from_secs(3))
+        .map_err(|err| {
+            AppError::new(
+                "CODEX_STATE_DB_BUSY_TIMEOUT_FAILED",
+                format!(
+                    "Failed to configure SQLite busy timeout {}: {}",
+                    db_path.display(),
+                    err
+                ),
+                "Close Codex and try again.",
+            )
+        })?;
+    Ok(Some(connection))
+}
+
+fn read_sqlite_session_rows(codex_home: &Path) -> AppResult<Vec<SqliteSessionRow>> {
+    let Some(connection) = open_state_connection(codex_home)? else {
+        return Ok(Vec::new());
+    };
+    let columns = read_threads_columns(&connection)?;
+    if columns.is_empty() || !columns.contains("id") {
+        return Ok(Vec::new());
+    }
+
+    let select_exprs = [
+        ("id", "id"),
+        ("title", "title"),
+        ("cwd", "cwd"),
+        ("model_provider", "provider"),
+        ("archived", "archived"),
+        ("updated_at_ms", "updated_at_ms"),
+        ("updated_at", "updated_at"),
+        ("created_at_ms", "created_at_ms"),
+        ("created_at", "created_at"),
+        ("rollout_path", "rollout_path"),
+        ("preview", "preview"),
+        ("first_user_message", "first_user_message"),
+    ]
+    .into_iter()
+    .filter_map(|(column, alias)| {
+        if columns.contains(column) {
+            Some(format!("{column} AS {alias}"))
+        } else {
+            None
+        }
+    })
+    .collect::<Vec<_>>();
+
+    let sql = format!("SELECT {} FROM threads", select_exprs.join(", "));
+    let mut statement = connection.prepare(&sql).map_err(|err| {
+        AppError::new(
+            "CODEX_STATE_DB_QUERY_FAILED",
+            format!("Failed to prepare Codex session query: {}", err),
+            "Close Codex and try again.",
+        )
+    })?;
+    let mapped = statement.query_map([], |row| {
+        let id = get_row_string(row, "id")?;
+        let title = get_row_string(row, "title").unwrap_or_else(|_| String::new());
+        let cwd = get_row_string(row, "cwd").unwrap_or_else(|_| String::new());
+        let provider = get_row_string(row, "provider").unwrap_or_else(|_| String::new());
+        let archived = get_row_i64(row, "archived").unwrap_or(0) != 0;
+        let updated_at = get_row_i64(row, "updated_at_ms")
+            .or_else(|_| get_row_i64(row, "updated_at"))
+            .ok();
+        let created_at = get_row_i64(row, "created_at_ms")
+            .or_else(|_| get_row_i64(row, "created_at"))
+            .ok();
+        let rollout_path = get_row_optional_string(row, "rollout_path").ok().flatten();
+        let preview = get_row_optional_string(row, "preview")
+            .ok()
+            .flatten()
+            .or_else(|| {
+                get_row_optional_string(row, "first_user_message")
+                    .ok()
+                    .flatten()
+            });
+        Ok(SqliteSessionRow {
+            id,
+            title,
+            cwd,
+            provider,
+            archived,
+            updated_at,
+            created_at,
+            rollout_path,
+            preview,
+        })
+    });
+    let rows = mapped.map_err(|err| {
+        AppError::new(
+            "CODEX_STATE_DB_QUERY_FAILED",
+            format!("Failed to query Codex sessions: {}", err),
+            "Close Codex and try again.",
+        )
+    })?;
+
+    let mut result = Vec::new();
+    for row in rows {
+        result.push(row.map_err(|err| {
+            AppError::new(
+                "CODEX_STATE_DB_QUERY_FAILED",
+                format!("Failed to read Codex session row: {}", err),
+                "Close Codex and try again.",
+            )
+        })?);
+    }
+    Ok(result)
+}
+
+fn update_sqlite_selected_threads_provider(
+    codex_home: &Path,
+    target_provider: &str,
+    selected_ids: &HashSet<String>,
+) -> AppResult<usize> {
+    let Some(mut connection) = open_state_connection(codex_home)? else {
+        return Ok(0);
+    };
+    let columns = read_threads_columns(&connection)?;
+    if !columns.contains("id") || !columns.contains("model_provider") {
+        return Ok(0);
+    }
+    let transaction = connection.transaction().map_err(|err| {
+        AppError::new(
+            "CODEX_STATE_DB_WRITE_FAILED",
+            format!("Failed to start Codex session restore transaction: {}", err),
+            "Close Codex and try again.",
+        )
+    })?;
+    let mut updated = 0usize;
+    for id in selected_ids {
+        updated += transaction
+            .execute(
+                "UPDATE threads SET model_provider = ?1 WHERE id = ?2 AND COALESCE(model_provider, '') <> ?1",
+                (target_provider, id),
+            )
+            .map_err(|err| {
+                AppError::new(
+                    "CODEX_STATE_DB_WRITE_FAILED",
+                    format!("Failed to restore Codex session visibility for {}: {}", id, err),
+                    "Close Codex and try again.",
+                )
+            })?;
+    }
+    transaction.commit().map_err(|err| {
+        AppError::new(
+            "CODEX_STATE_DB_WRITE_FAILED",
+            format!(
+                "Failed to commit Codex session restore transaction: {}",
+                err
+            ),
+            "Close Codex and try again.",
+        )
+    })?;
+    Ok(updated)
+}
+
+fn delete_sqlite_sessions(codex_home: &Path, selected_ids: &HashSet<String>) -> AppResult<usize> {
+    let Some(mut connection) = open_state_connection(codex_home)? else {
+        return Ok(0);
+    };
+    let columns = read_threads_columns(&connection)?;
+    if !columns.contains("id") {
+        return Ok(0);
+    }
+    let transaction = connection.transaction().map_err(|err| {
+        AppError::new(
+            "CODEX_STATE_DB_WRITE_FAILED",
+            format!("Failed to start Codex session delete transaction: {}", err),
+            "Close Codex and try again.",
+        )
+    })?;
+    let mut deleted = 0usize;
+    for id in selected_ids {
+        deleted += transaction
+            .execute("DELETE FROM threads WHERE id = ?1", [id])
+            .map_err(|err| {
+                AppError::new(
+                    "CODEX_STATE_DB_WRITE_FAILED",
+                    format!(
+                        "Failed to delete Codex session {} from state database: {}",
+                        id, err
+                    ),
+                    "Close Codex and try again.",
+                )
+            })?;
+    }
+    transaction.commit().map_err(|err| {
+        AppError::new(
+            "CODEX_STATE_DB_WRITE_FAILED",
+            format!("Failed to commit Codex session delete transaction: {}", err),
+            "Close Codex and try again.",
+        )
+    })?;
+    Ok(deleted)
+}
+
+fn remove_session_index_entries(
+    codex_home: &Path,
+    selected_ids: &HashSet<String>,
+) -> AppResult<()> {
+    let index_path = codex_home.join(SESSION_INDEX_FILE);
+    if !index_path.exists() {
+        return Ok(());
+    }
+    let content = fs::read_to_string(&index_path).map_err(|err| {
+        AppError::new(
+            "CODEX_SESSION_INDEX_READ_FAILED",
+            format!("Failed to read {}: {}", index_path.display(), err),
+            "Close Codex and try again.",
+        )
+    })?;
+    let mut changed = false;
+    let mut kept_lines = Vec::new();
+    for line in content.lines() {
+        let should_delete = serde_json::from_str::<JsonValue>(line)
+            .ok()
+            .and_then(|value| {
+                value
+                    .get("id")
+                    .and_then(JsonValue::as_str)
+                    .map(ToString::to_string)
+            })
+            .is_some_and(|id| selected_ids.contains(&id));
+        if should_delete {
+            changed = true;
+        } else {
+            kept_lines.push(line);
+        }
+    }
+    if !changed {
+        return Ok(());
+    }
+    let next = if kept_lines.is_empty() {
+        String::new()
+    } else {
+        format!("{}\n", kept_lines.join("\n"))
+    };
+    atomic_write::write_atomic(&index_path, next.as_bytes())
+}
+
+fn normalized_id_set(session_ids: &[String]) -> AppResult<HashSet<String>> {
+    let ids = session_ids
+        .iter()
+        .map(|id| id.trim())
+        .filter(|id| !id.is_empty())
+        .map(ToString::to_string)
+        .collect::<HashSet<_>>();
+    if ids.is_empty() {
+        return Err(AppError::new(
+            "CODEX_SESSION_SELECTION_EMPTY",
+            "No sessions were selected.",
+            "Select at least one session and try again.",
+        ));
+    }
+    Ok(ids)
+}
+
+fn get_row_string(row: &rusqlite::Row<'_>, name: &str) -> rusqlite::Result<String> {
+    row.get::<&str, String>(name)
+}
+
+fn get_row_optional_string(
+    row: &rusqlite::Row<'_>,
+    name: &str,
+) -> rusqlite::Result<Option<String>> {
+    row.get::<&str, Option<String>>(name)
+}
+
+fn get_row_i64(row: &rusqlite::Row<'_>, name: &str) -> rusqlite::Result<i64> {
+    row.get::<&str, i64>(name)
+}
+
+fn rollout_modified_at_ms(payload: &JsonValue) -> Option<i64> {
+    payload
+        .get("updated_at_ms")
+        .or_else(|| payload.get("updated_at"))
+        .and_then(JsonValue::as_i64)
+}
+
+fn file_modified_at_ms(path: &Path) -> Option<i64> {
+    fs::metadata(path)
+        .ok()
+        .and_then(|metadata| metadata.modified().ok())
+        .and_then(|time| time.duration_since(SystemTime::UNIX_EPOCH).ok())
+        .map(|duration| duration.as_millis().min(i64::MAX as u128) as i64)
+}
+
+fn project_name(cwd: &str) -> String {
+    Path::new(cwd)
+        .file_name()
+        .and_then(|value| value.to_str())
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or("Unknown project")
+        .to_string()
+}
+
+fn display_title_from_id(id: &str) -> String {
+    if id.len() <= 8 {
+        return id.to_string();
+    }
+    format!("Session {}", &id[..8])
 }
 
 #[cfg(test)]

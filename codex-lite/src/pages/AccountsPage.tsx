@@ -19,7 +19,11 @@ function matchesQuery(account: CodexAccountView, query: string): boolean {
   return haystack.includes(query);
 }
 
-export function AccountsPage() {
+interface AccountsPageProps {
+  onOpenSessions: () => void;
+}
+
+export function AccountsPage({ onOpenSessions }: AccountsPageProps) {
   const {
     accounts,
     loading,
@@ -153,8 +157,7 @@ export function AccountsPage() {
                 variant="secondary"
                 aria-label="Session management"
                 icon={<Settings size={16} />}
-                disabled
-                title="会话管理功能尚未接入"
+                onClick={onOpenSessions}
               >
                 会话管理
               </Button>
