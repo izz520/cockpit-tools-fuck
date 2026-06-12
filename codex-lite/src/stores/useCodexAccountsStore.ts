@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { CodexAccountView } from '../types/codex';
+import { isOAuthAuthMode, type CodexAccountView } from '../types/codex';
 import type { AppError } from '../types/system';
 import {
   deleteCodexAccount,
@@ -108,7 +108,7 @@ export const useCodexAccountsStore = create<CodexAccountsState>((set, get) => ({
   },
   async refreshAllQuotas() {
     const oauthAccountIds = get()
-      .accounts.filter((account) => account.authMode === 'oauth')
+      .accounts.filter((account) => isOAuthAuthMode(account.authMode))
       .map((account) => account.id);
     set({ refreshingAll: true, error: null });
     try {

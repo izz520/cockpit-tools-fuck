@@ -6,10 +6,10 @@ import type { LogEntry } from '../types/system';
 type LogFilter = 'all' | LogEntry['level'];
 
 const logFilters: Array<{ label: string; value: LogFilter }> = [
-  { label: 'All', value: 'all' },
-  { label: 'Error', value: 'error' },
-  { label: 'Warn', value: 'warn' },
-  { label: 'Info', value: 'info' },
+  { label: '全部', value: 'all' },
+  { label: '错误', value: 'error' },
+  { label: '警告', value: 'warn' },
+  { label: '信息', value: 'info' },
 ];
 
 export function LogsPage() {
@@ -38,18 +38,18 @@ export function LogsPage() {
 
   return (
     <div className="content">
-      <section className="panel" style={{ flex: 1, padding: 20 }}>
+      <section className="panel">
         <div className="page-section-header">
           <div>
-            <h2 className="section-title">Logs</h2>
-            <p className="muted">Recent local logs with sensitive values redacted.</p>
+            <h2 className="section-title">日志</h2>
+            <p className="muted">查看近期本地日志，敏感字段会保持脱敏显示。</p>
           </div>
           <div className="toolbar-actions">
             <Button variant="secondary" loading={loading} onClick={() => void refreshLogs()}>
-              Refresh
+              刷新
             </Button>
             <Button variant="secondary" onClick={() => void openLogDir()}>
-              Open logs
+              打开日志
             </Button>
           </div>
         </div>
@@ -69,7 +69,7 @@ export function LogsPage() {
           ))}
         </div>
         {filteredEntries.length === 0 ? (
-          <pre className="mono">{entries.length === 0 ? 'No log entries loaded.' : 'No log entries match this filter.'}</pre>
+          <pre className="mono">{entries.length === 0 ? '还没有加载日志。' : '当前筛选条件下没有日志。'}</pre>
         ) : (
           <div className="log-list">
             {filteredEntries.map((entry, index) => (

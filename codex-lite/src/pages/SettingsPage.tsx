@@ -1,16 +1,16 @@
+import { useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { openDataDir, openLogDir } from '../services/systemService';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import type { SystemSnapshot } from '../types/system';
-import { useEffect } from 'react';
 
 const pathRows: Array<{ label: string; key: keyof SystemSnapshot }> = [
-  { label: 'App data', key: 'appDataDir' },
-  { label: 'Logs', key: 'logsDir' },
-  { label: 'Accounts file', key: 'accountsFilePath' },
-  { label: 'Settings file', key: 'settingsFilePath' },
-  { label: 'Codex home', key: 'defaultCodexHome' },
-  { label: 'Codex auth', key: 'defaultCodexAuthFile' },
+  { label: '应用数据', key: 'appDataDir' },
+  { label: '日志目录', key: 'logsDir' },
+  { label: '账号文件', key: 'accountsFilePath' },
+  { label: '设置文件', key: 'settingsFilePath' },
+  { label: 'Codex Home', key: 'defaultCodexHome' },
+  { label: 'Codex Auth', key: 'defaultCodexAuthFile' },
 ];
 
 export function SettingsPage() {
@@ -22,9 +22,9 @@ export function SettingsPage() {
 
   return (
     <div className="content">
-      <section className="panel" style={{ maxWidth: 760, width: '100%', padding: 20 }}>
-        <h2 className="section-title">Settings</h2>
-        <p className="muted">Local-only paths and privacy controls.</p>
+      <section className="panel">
+        <h2 className="section-title">设置</h2>
+        <p className="muted">本地路径和隐私相关配置，仅在当前设备生效。</p>
         {error ? <p className="muted">{error.message}</p> : null}
         {snapshot ? (
           <div className="settings-grid">
@@ -35,22 +35,22 @@ export function SettingsPage() {
               </div>
             ))}
             <div className="settings-row">
-              <span>Auth file status</span>
-              <strong>{snapshot.codexAuthFileExists ? 'Found' : 'Missing'}</strong>
+              <span>Auth 文件状态</span>
+              <strong>{snapshot.codexAuthFileExists ? '已找到' : '缺失'}</strong>
             </div>
           </div>
         ) : (
-          <p className="muted">{loading ? 'Loading local paths...' : 'No local path snapshot loaded.'}</p>
+          <p className="muted">{loading ? '正在加载本地路径...' : '还没有加载本地路径快照。'}</p>
         )}
         <div className="toolbar-actions">
           <Button variant="secondary" loading={detecting} onClick={() => void detectPaths()}>
-            Detect Codex paths
+            检测 Codex 路径
           </Button>
           <Button variant="secondary" onClick={() => void openDataDir()}>
-            Open data directory
+            打开数据目录
           </Button>
           <Button variant="secondary" onClick={() => void openLogDir()}>
-            Open logs
+            打开日志
           </Button>
         </div>
       </section>

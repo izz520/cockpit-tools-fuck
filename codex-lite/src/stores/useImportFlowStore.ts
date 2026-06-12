@@ -62,6 +62,7 @@ interface ImportFlowState {
   failedImports: ImportResult['failed'];
   error: AppError | null;
   openDrawer: () => void;
+  openOAuthLogin: () => Promise<void>;
   closeDrawer: () => void;
   setSource: (source: ImportSource) => void;
   setJsonText: (jsonText: string) => void;
@@ -213,6 +214,26 @@ export const useImportFlowStore = create<ImportFlowState>((set) => ({
       batchPreview: null,
       batchSelectedItemIds: [],
     });
+  },
+  async openOAuthLogin() {
+    const { oauth } = useImportFlowStore.getState();
+    if (oauth.login && oauth.step !== 'completed') {
+      void cancelCodexOAuthLogin(oauth.login.loginId);
+    }
+    set({
+      open: true,
+      source: 'oauth',
+      importing: false,
+      selectingFiles: false,
+      previewingBatch: false,
+      error: null,
+      resultAccounts: [],
+      failedImports: [],
+      batchPreview: null,
+      batchSelectedItemIds: [],
+      oauth: emptyOAuthFlow,
+    });
+    await useImportFlowStore.getState().startOAuthLogin();
   },
   closeDrawer() {
     const { oauth } = useImportFlowStore.getState();

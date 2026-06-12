@@ -1,6 +1,10 @@
 import type { AppError } from './system';
 
-export type CodexAuthMode = 'oauth' | 'api_key';
+export type CodexAuthMode = 'oauth' | 'o_auth' | 'api_key';
+
+export function isOAuthAuthMode(authMode: CodexAuthMode): boolean {
+  return authMode === 'oauth' || authMode === 'o_auth';
+}
 
 export interface CodexQuotaView {
   hourlyRemainingPercent?: number | null;

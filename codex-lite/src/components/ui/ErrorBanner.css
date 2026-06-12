@@ -3,8 +3,9 @@
   grid-template-columns: auto 1fr auto;
   gap: 12px;
   align-items: start;
-  padding: 12px 14px;
-  border-bottom: 1px solid oklch(0.7 0.14 27 / 0.28);
+  padding: 14px 16px;
+  border: 1px solid oklch(0.7 0.14 27 / 0.28);
+  border-radius: var(--radius-control);
   background: var(--color-error-soft);
   color: var(--color-error);
 }

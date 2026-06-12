@@ -14,9 +14,9 @@
   width: min(420px, calc(100vw - 48px));
   display: grid;
   gap: 16px;
-  padding: 20px;
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
+  padding: 24px;
+  border: 1px solid oklch(0.94 0.016 255 / 0.76);
+  border-radius: var(--radius-card);
   background: var(--color-material-strong);
   box-shadow: var(--shadow-modal);
   backdrop-filter: var(--blur-material);
@@ -26,8 +26,9 @@
 .delete-modal h2 {
   margin: 0;
   color: var(--color-text-strong);
-  font-size: 18px;
-  line-height: 26px;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 820;
 }
 
 .delete-modal p {
@@ -43,7 +44,7 @@
   padding: 12px;
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  background: var(--color-control);
+  background: linear-gradient(180deg, oklch(0.988 0.008 252), white 76%);
 }
 
 .delete-modal-account span {
@@ -72,7 +73,7 @@
   margin: 0;
   padding: 10px 12px;
   border: 1px solid oklch(0.7 0.14 27 / 0.32);
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   background: var(--color-error-soft);
   color: var(--color-text);
   font-size: 13px;

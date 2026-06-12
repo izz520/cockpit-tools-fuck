@@ -23,8 +23,8 @@ export function AppShell({ page, setPage, children }: AppShellProps) {
     <div className="app-shell">
       <nav className="app-nav" aria-label="Primary">
         <div className="app-brand">
-          <div className="app-logo">C.</div>
-          <strong>Codex Lite</strong>
+          <div className="app-logo">A.</div>
+          <strong>AI Accounts</strong>
         </div>
 
         <div className="nav-section">

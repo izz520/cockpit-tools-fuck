@@ -3,7 +3,7 @@
   inset: 0;
   display: flex;
   justify-content: flex-end;
-  background: oklch(0.22 0.02 255 / 0.2);
+  background: oklch(0.22 0.02 255 / 0.22);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   z-index: 40;
@@ -15,9 +15,11 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--color-material-strong);
+  background:
+    radial-gradient(circle at 50% 0%, oklch(0.94 0.04 235 / 0.42), transparent 34%),
+    var(--color-material-strong);
   box-shadow: var(--shadow-modal);
-  border-left: 1px solid oklch(1 0 0 / 0.5);
+  border-left: 1px solid var(--color-border);
   backdrop-filter: var(--blur-material);
   -webkit-backdrop-filter: var(--blur-material);
 }
@@ -29,18 +31,19 @@
 }
 
 .drawer-header {
-  padding: 20px 20px 18px;
+  padding: 24px 26px 20px;
   display: flex;
   justify-content: space-between;
   gap: 12px;
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-material);
+  background: oklch(1 0 0 / 0.54);
 }
 
 .drawer-header h2,
 .drawer-section h3 {
   margin: 0;
   color: var(--color-text-strong);
+  font-weight: 820;
 }
 
 .drawer-header p {
@@ -49,7 +52,7 @@
 }
 
 .drawer-section {
-  padding: 16px 20px;
+  padding: 18px 26px;
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -57,8 +60,8 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 12px 20px;
-  background: var(--color-material);
+  padding: 14px 26px;
+  background: oklch(1 0 0 / 0.7);
   backdrop-filter: var(--blur-material);
   -webkit-backdrop-filter: var(--blur-material);
 }
@@ -85,13 +88,13 @@
 }
 
 .source-tab {
-  height: 34px;
+  height: 38px;
   display: flex;
   gap: 7px;
   align-items: center;
   padding: 0 10px;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   background: var(--color-control);
   text-align: left;
   cursor: pointer;
@@ -108,8 +111,8 @@
   display: grid;
   place-items: center;
   border-radius: 8px;
-  color: var(--color-primary);
-  background: var(--color-primary-soft);
+  color: var(--color-blue);
+  background: var(--color-blue-soft);
 }
 
 .source-tab strong {
@@ -119,7 +122,7 @@
 }
 
 .source-tab.selected {
-  border-color: oklch(0.64 0.14 254 / 0.55);
+  border-color: oklch(0.68 0.158 260 / 0.55);
   background: var(--color-primary-soft);
 }
 
@@ -161,12 +164,11 @@
   width: 100%;
   box-sizing: border-box;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   padding: 10px 12px;
   color: var(--color-text-strong);
   background: var(--color-control);
   font: inherit;
-  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.5);
 }
 
 .import-field textarea {
@@ -213,7 +215,7 @@
   align-items: flex-start;
   padding: 10px;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   background: var(--color-control);
 }
 
@@ -253,7 +255,7 @@
   gap: 2px;
   padding: 10px;
   border: 1px solid oklch(0.7 0.14 27 / 0.34);
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   background: var(--color-error-soft);
 }
 
@@ -287,7 +289,7 @@
   gap: 2px;
   padding: 10px;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   background: var(--color-control);
 }
 
@@ -310,7 +312,7 @@
   gap: 6px;
   padding: 0 12px;
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   color: var(--color-primary);
   background: var(--color-control);
   font-weight: 700;
@@ -326,7 +328,7 @@
   margin: 0;
   padding: 10px;
   border: 1px solid oklch(0.72 0.12 72 / 0.34);
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   color: var(--color-text-strong);
   background: var(--color-warning-soft);
 }
@@ -340,12 +342,12 @@
 
 .drawer-footer {
   margin-top: auto;
-  padding: 16px 20px;
+  padding: 16px 26px;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
   border-top: 1px solid var(--color-border);
-  background: var(--color-material);
+  background: oklch(1 0 0 / 0.7);
 }
 
 @media (max-width: 760px) {

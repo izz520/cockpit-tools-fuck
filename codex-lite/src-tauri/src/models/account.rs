@@ -2,9 +2,10 @@ use crate::models::error::AppError;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
 pub enum CodexAuthMode {
+    #[serde(rename = "oauth", alias = "o_auth")]
     OAuth,
+    #[serde(rename = "api_key")]
     ApiKey,
 }
 

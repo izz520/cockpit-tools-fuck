@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { useEffect, useMemo } from 'react';
 import { useCodexAccountsStore } from '../../stores/useCodexAccountsStore';
 import { type ImportSource, useImportFlowStore } from '../../stores/useImportFlowStore';
-import type { CodexAccountView } from '../../types/codex';
+import { isOAuthAuthMode, type CodexAccountView } from '../../types/codex';
 import { Button } from '../ui/Button';
 import { ErrorBanner } from '../ui/ErrorBanner';
 import { IconButton } from '../ui/IconButton';
@@ -171,7 +171,7 @@ export function ImportDrawer() {
       closeDrawer();
     }
     for (const account of accounts) {
-      if (account.authMode === 'oauth') {
+      if (isOAuthAuthMode(account.authMode)) {
         void refreshAccountQuota(account.id);
       }
     }
