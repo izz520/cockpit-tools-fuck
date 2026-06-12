@@ -9,7 +9,8 @@ const ACTIVE_START: &str = "# >>> codex-lite active provider start";
 const ACTIVE_END: &str = "# <<< codex-lite active provider end";
 const PROVIDER_START: &str = "# >>> codex-lite api provider start";
 const PROVIDER_END: &str = "# <<< codex-lite api provider end";
-const PROVIDER_ID: &str = "codex_lite_api_key";
+pub const API_PROVIDER_ID: &str = "codex_lite_api_key";
+pub const DEFAULT_PROVIDER_ID: &str = "openai";
 
 pub fn apply_account_config(account: &CodexAccount, config_path: &Path) -> AppResult<()> {
     let content = read_optional_config(config_path)?;
@@ -33,6 +34,25 @@ pub fn apply_account_config(account: &CodexAccount, config_path: &Path) -> AppRe
     };
 
     atomic_write::write_atomic(config_path, next.as_bytes())
+}
+
+pub fn read_active_provider(config_path: &Path) -> AppResult<String> {
+    let content = read_optional_config(config_path)?;
+    let (prelude, _) = split_prelude(&content);
+    let provider = prelude
+        .lines()
+        .find_map(|line| {
+            let (key, value) = line.trim_start().split_once('=')?;
+            if key.trim() == "model_provider" {
+                parse_toml_string(value)
+            } else {
+                None
+            }
+        })
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| DEFAULT_PROVIDER_ID.to_string());
+
+    Ok(provider)
 }
 
 fn read_optional_config(config_path: &Path) -> AppResult<String> {
@@ -86,13 +106,13 @@ fn clear_active_provider(content: &str) -> String {
 
 fn build_active_provider_block(previous_model_provider: Option<&str>) -> String {
     let previous_line = previous_model_provider
-        .filter(|value| !value.is_empty() && *value != PROVIDER_ID)
+        .filter(|value| !value.is_empty() && *value != API_PROVIDER_ID)
         .map(|value| format!("# previous_model_provider = {}\n", toml_string(value)))
         .unwrap_or_default();
 
     format!(
         "{ACTIVE_START}\n{previous_line}model_provider = {}\n{ACTIVE_END}\n",
-        toml_string(PROVIDER_ID)
+        toml_string(API_PROVIDER_ID)
     )
 }
 
@@ -105,7 +125,7 @@ fn build_api_provider_block(account: &CodexAccount, base_url: &str) -> String {
     };
 
     format!(
-        "\n{PROVIDER_START}\n[model_providers.{PROVIDER_ID}]\nname = {}\nbase_url = {}\nwire_api = \"responses\"\nsupports_websockets = false\nrequires_openai_auth = true\n{PROVIDER_END}\n",
+        "\n{PROVIDER_START}\n[model_providers.{API_PROVIDER_ID}]\nname = {}\nbase_url = {}\nwire_api = \"responses\"\nsupports_websockets = false\nrequires_openai_auth = true\n{PROVIDER_END}\n",
         toml_string(provider_name),
         toml_string(base_url)
     )

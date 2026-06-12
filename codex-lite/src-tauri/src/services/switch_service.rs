@@ -4,7 +4,9 @@ use std::path::Path;
 use crate::infra::{atomic_write, codex_keychain, paths};
 use crate::models::account::SwitchResult;
 use crate::models::error::{AppError, AppResult};
-use crate::services::{account_service, auth_file_service, codex_config_service};
+use crate::services::{
+    account_service, auth_file_service, codex_config_service, codex_session_visibility_service,
+};
 
 pub fn switch_account(account_id: String) -> AppResult<SwitchResult> {
     switch_account_with_writer(account_id, atomic_write::write_atomic)
@@ -56,14 +58,16 @@ fn switch_account_with_writer(
         return Err(write_error);
     }
 
-    if let Err(config_error) =
-        codex_config_service::apply_account_config(&account, &paths::default_codex_config_file()?)
-    {
+    let config_path = paths::default_codex_config_file()?;
+    if let Err(config_error) = codex_config_service::apply_account_config(&account, &config_path) {
         if let Some(path) = backup_path.as_ref() {
             let _ = fs::copy(path, &auth_path);
         }
         return Err(config_error);
     }
+
+    let target_provider = codex_config_service::read_active_provider(&config_path)?;
+    codex_session_visibility_service::repair_default_codex_home_for_provider(&target_provider)?;
 
     // On macOS, Codex reads OAuth credentials from the login keychain too. Update
     // it so the switch fully takes effect. Failure here is non-fatal: auth.json is
