@@ -143,7 +143,7 @@ test.describe('Import drawer smoke', () => {
     await addAccountConfirmButton(page).click();
 
     await expect(page.getByRole('dialog', { name: 'Add account' })).toBeHidden();
-    await expect(page.getByText('Smoke API Key')).toBeVisible();
+    await expect(page.locator('.account-row').filter({ hasText: 'Smoke API Key' })).toBeVisible();
   });
 
   test('shows manual OAuth callback flow controls', async ({ page }) => {

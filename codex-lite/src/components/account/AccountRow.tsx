@@ -1,7 +1,6 @@
-import { ChevronRight, RefreshCw, Trash2 } from 'lucide-react';
+import { CalendarDays, Clock3, KeyRound, Play, RefreshCw, Trash2 } from 'lucide-react';
 import type { CodexAccountView } from '../../types/codex';
-import { Button } from '../ui/Button';
-import { QuotaMeter } from './QuotaMeter';
+import { IconButton } from '../ui/IconButton';
 import './AccountRow.css';
 
 interface AccountRowProps {
@@ -22,9 +21,9 @@ function formatAccountMode(account: CodexAccountView): string {
 
 function formatTimestamp(value?: number | null): string {
   if (!value) {
-    return 'Never';
+    return '从未使用';
   }
-  return new Date(value * 1000).toLocaleString();
+  return new Date(value * 1000).toLocaleDateString();
 }
 
 function formatReset(value?: number | null): string | null {
@@ -32,6 +31,27 @@ function formatReset(value?: number | null): string | null {
     return null;
   }
   return new Date(value * 1000).toLocaleString();
+}
+
+function formatQuotaLabel(value?: number | null): string {
+  if (typeof value !== 'number') {
+    return '-';
+  }
+  return `${Math.max(0, Math.min(100, value))}%`;
+}
+
+function getPlanTone(planType?: string | null): string {
+  const plan = planType?.toLowerCase() ?? '';
+  if (plan.includes('pro')) {
+    return 'pro';
+  }
+  if (plan.includes('team')) {
+    return 'team';
+  }
+  if (plan.includes('plus')) {
+    return 'plus';
+  }
+  return 'default';
 }
 
 export function AccountRow({
@@ -47,80 +67,63 @@ export function AccountRow({
 }: AccountRowProps) {
   const quotaUnsupported = account.authMode === 'api_key';
   const accountIdText = quotaUnsupported ? '-' : account.accountId ?? 'Unknown';
-  const planText = quotaUnsupported ? '-' : account.planType ?? 'Unknown';
+  const planText = quotaUnsupported ? 'API' : account.planType ?? 'Free';
   const detailId = `account-detail-${account.id}`;
   const hourly = account.quota?.hourlyRemainingPercent;
+  const weekly = account.quota?.weeklyRemainingPercent;
+  const normalizedHourly = typeof hourly === 'number' ? Math.max(0, Math.min(100, hourly)) : 0;
+  const normalizedWeekly = typeof weekly === 'number' ? Math.max(0, Math.min(100, weekly)) : 0;
+  const planTone = quotaUnsupported ? 'api' : getPlanTone(account.planType);
 
   return (
-    <article className={`account-row ${account.isCurrent ? 'current' : ''} ${expanded ? 'expanded' : ''}`}>
+    <article className={`account-card account-row ${account.isCurrent ? 'current' : ''} ${expanded ? 'expanded' : ''}`}>
       <button
         type="button"
-        className="account-summary"
+        className="account-card-main account-summary"
         aria-expanded={expanded}
         aria-controls={detailId}
         onClick={() => onToggle(account.id)}
       >
-        <span className={`account-status-dot ${account.isCurrent ? 'is-current' : ''}`} aria-hidden="true" />
-        <span className="account-avatar" aria-hidden="true">
-          {account.displayName.slice(0, 1).toUpperCase()}
+        <span className="account-card-header">
+          <strong>{account.email ?? account.displayName}</strong>
+          <span className={`account-plan-badge account-plan-${planTone}`}>{planText}</span>
         </span>
-        <span className="account-title-group">
-          <strong>{account.displayName}</strong>
-          <span>{account.email ?? account.id}</span>
+        <span className="account-card-name">{account.displayName}</span>
+
+        <span className="quota-lines" aria-hidden="true">
+          <span className="quota-line">
+            <span>
+              <Clock3 size={16} />
+              5h
+            </span>
+            <strong>{quotaUnsupported ? 'API' : formatQuotaLabel(hourly)}</strong>
+          </span>
+          <span className="quota-track">
+            <span style={{ width: `${quotaUnsupported ? 100 : normalizedHourly}%` }} />
+          </span>
+          <span className="quota-line">
+            <span>
+              <CalendarDays size={16} />
+              Weekly
+            </span>
+            <strong>{quotaUnsupported ? '可用' : formatQuotaLabel(weekly)}</strong>
+          </span>
+          <span className="quota-track">
+            <span style={{ width: `${quotaUnsupported ? 100 : normalizedWeekly}%` }} />
+          </span>
         </span>
-        <span className="account-summary-quota" aria-hidden="true">
-          {quotaUnsupported ? (
-            <span className="account-summary-quota-na">API Key</span>
-          ) : typeof hourly === 'number' ? (
-            <>
-              <span className="account-summary-quota-track">
-                <span
-                  className={`account-summary-quota-fill quota-${hourly >= 40 ? 'success' : hourly >= 15 ? 'warning' : 'error'}`}
-                  style={{ width: `${Math.max(0, Math.min(100, hourly))}%` }}
-                />
-              </span>
-              <span className="account-summary-quota-value">{Math.max(0, Math.min(100, hourly))}%</span>
-            </>
-          ) : (
-            <span className="account-summary-quota-na">No quota</span>
-          )}
+
+        <span className="account-validity">
+          <span>
+            <CalendarDays size={15} />
+            有效期 30 天
+          </span>
+          <span>{formatReset(account.quota?.weeklyResetAt) ?? formatTimestamp(account.lastUsedAt)}</span>
         </span>
-        <span className="account-badges">
-          {account.isCurrent ? <span className="badge badge-current">Current</span> : null}
-          {account.quotaError ? <span className="badge badge-error">Error</span> : null}
-          <span className="badge">{formatAccountMode(account)}</span>
-        </span>
-        <ChevronRight className="account-chevron" size={16} aria-hidden="true" />
       </button>
 
       {expanded ? (
         <div className="account-detail-panel" id={detailId}>
-          {quotaUnsupported ? (
-            <div className="account-quota-na" aria-label="Quota not applicable">
-              <strong>Quota not applicable</strong>
-              <span>API Key accounts do not expose ChatGPT web quota.</span>
-            </div>
-          ) : (
-            <div className="account-detail-quotas">
-              <QuotaMeter
-                error={account.quotaError}
-                label="Hourly"
-                loading={refreshing}
-                resetAt={formatReset(account.quota?.hourlyResetAt)}
-                stale={account.quota?.stale ?? false}
-                value={account.quota?.hourlyRemainingPercent}
-              />
-              <QuotaMeter
-                error={account.quotaError}
-                label="Weekly"
-                loading={refreshing}
-                resetAt={formatReset(account.quota?.weeklyResetAt)}
-                stale={account.quota?.stale ?? false}
-                value={account.quota?.weeklyRemainingPercent}
-              />
-            </div>
-          )}
-
           {account.quotaError ? (
             <div className="account-detail-error" role="alert">
               <strong>{account.quotaError.message}</strong>
@@ -146,38 +149,31 @@ export function AccountRow({
               <dd>{formatTimestamp(account.lastUsedAt)}</dd>
             </div>
           </dl>
-
-          <div className="account-detail-actions">
-            <Button
-              variant="danger"
-              icon={<Trash2 size={16} />}
-              loading={deleting}
-              onClick={() => onDelete(account.id)}
-            >
-              Delete
-            </Button>
-            <div className="account-detail-actions-primary">
-              <Button
-                variant="ghost"
-                icon={<RefreshCw size={16} />}
-                disabled={quotaUnsupported}
-                loading={refreshing}
-                onClick={() => onRefreshQuota(account.id)}
-              >
-                Refresh quota
-              </Button>
-              <Button
-                variant={account.isCurrent ? 'secondary' : 'primary'}
-                disabled={account.isCurrent}
-                loading={switching}
-                onClick={() => onSwitch(account.id)}
-              >
-                {account.isCurrent ? 'Current' : 'Switch'}
-              </Button>
-            </div>
-          </div>
         </div>
       ) : null}
+
+      <div className="account-card-actions">
+        <IconButton
+          label={account.isCurrent ? 'Current account' : 'Switch account'}
+          icon={switching ? <RefreshCw className="spin-icon" size={18} /> : <Play size={18} />}
+          active={account.isCurrent}
+          disabled={account.isCurrent || switching}
+          onClick={() => onSwitch(account.id)}
+        />
+        <IconButton
+          label="Refresh quota"
+          icon={refreshing ? <RefreshCw className="spin-icon" size={18} /> : <RefreshCw size={18} />}
+          disabled={quotaUnsupported || refreshing}
+          onClick={() => onRefreshQuota(account.id)}
+        />
+        <IconButton
+          label="Delete account"
+          icon={deleting ? <RefreshCw className="spin-icon" size={18} /> : <Trash2 size={18} />}
+          disabled={deleting}
+          onClick={() => onDelete(account.id)}
+        />
+        {quotaUnsupported ? <KeyRound className="account-card-mode" size={16} aria-label="API Key" /> : null}
+      </div>
     </article>
   );
 }

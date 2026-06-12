@@ -1,4 +1,4 @@
-import { FileText, Settings, Users } from 'lucide-react';
+import { Bot, FileText, MessageCircle, Settings, Sparkles, Users, Wand2 } from 'lucide-react';
 import { type PointerEvent, type ReactNode } from 'react';
 import { startWindowDragging } from '../../services/windowService';
 
@@ -22,21 +22,75 @@ export function AppShell({ page, setPage, children }: AppShellProps) {
   return (
     <div className="app-shell">
       <nav className="app-nav" aria-label="Primary">
-        <div className="app-logo">C</div>
-        <button className={`nav-button ${page === 'accounts' ? 'active' : ''}`} title="Accounts" onClick={() => setPage('accounts')}>
-          <Users size={20} />
-        </button>
-        <button className={`nav-button ${page === 'settings' ? 'active' : ''}`} title="Settings" onClick={() => setPage('settings')}>
-          <Settings size={20} />
-        </button>
-        <button className={`nav-button ${page === 'logs' ? 'active' : ''}`} title="Logs" onClick={() => setPage('logs')}>
-          <FileText size={20} />
-        </button>
+        <div className="app-brand">
+          <div className="app-logo">C.</div>
+          <strong>Codex Lite</strong>
+        </div>
+
+        <div className="nav-section">
+          <span className="nav-section-label">平台</span>
+          <button
+            className={`nav-button ${page === 'accounts' ? 'active' : ''}`}
+            title="Accounts"
+            onClick={() => setPage('accounts')}
+          >
+            <span className="nav-icon nav-icon-chatgpt">
+              <Users size={19} />
+            </span>
+            <span>Codex</span>
+          </button>
+          <button className="nav-button nav-button-muted" title="Claude" disabled>
+            <span className="nav-icon nav-icon-claude">AI</span>
+            <span>Claude</span>
+          </button>
+          <button className="nav-button nav-button-muted" title="Gemini" disabled>
+            <span className="nav-icon nav-icon-gemini">
+              <Sparkles size={19} />
+            </span>
+            <span>Gemini</span>
+          </button>
+          <button className="nav-button nav-button-muted" title="Automation" disabled>
+            <span className="nav-icon nav-icon-auto">
+              <Bot size={19} />
+            </span>
+            <span>Automation</span>
+          </button>
+          <button className="nav-button nav-button-muted" title="Tools" disabled>
+            <span className="nav-icon nav-icon-tools">
+              <Wand2 size={19} />
+            </span>
+            <span>Tools</span>
+          </button>
+        </div>
+
+        <div className="nav-footer">
+          <button
+            className={`nav-button ${page === 'logs' ? 'active' : ''}`}
+            title="Logs"
+            onClick={() => setPage('logs')}
+          >
+            <span className="nav-icon">
+              <FileText size={19} />
+            </span>
+            <span>日志</span>
+          </button>
+          <button
+            className={`nav-button ${page === 'settings' ? 'active' : ''}`}
+            title="Settings"
+            onClick={() => setPage('settings')}
+          >
+            <span className="nav-icon">
+              <Settings size={19} />
+            </span>
+            <span>设置</span>
+          </button>
+        </div>
       </nav>
       <main className="app-main">
         <header className="topbar" data-tauri-drag-region onPointerDown={handleTopbarPointerDown}>
           <div className="topbar-title-group">
-            <h1 className="page-title">{page === 'accounts' ? 'Codex accounts' : page === 'settings' ? 'Settings' : 'Logs'}</h1>
+            <MessageCircle size={18} aria-hidden="true" />
+            <h1 className="page-title">{page === 'accounts' ? 'AI Accounts' : page === 'settings' ? 'Settings' : 'Logs'}</h1>
           </div>
         </header>
         {children}
