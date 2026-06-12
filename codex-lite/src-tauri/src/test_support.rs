@@ -23,6 +23,8 @@ impl TestEnv {
         std::fs::create_dir_all(&codex_home).expect("test codex home should be created");
         std::env::set_var("CODEX_LITE_DATA_DIR", &data_dir);
         std::env::set_var("CODEX_LITE_CODEX_HOME", &codex_home);
+        // Tests must never touch the real macOS login keychain.
+        std::env::set_var("CODEX_LITE_DISABLE_KEYCHAIN", "1");
 
         Self {
             root,
@@ -50,6 +52,7 @@ impl Drop for TestEnv {
     fn drop(&mut self) {
         std::env::remove_var("CODEX_LITE_DATA_DIR");
         std::env::remove_var("CODEX_LITE_CODEX_HOME");
+        std::env::remove_var("CODEX_LITE_DISABLE_KEYCHAIN");
         let _ = std::fs::remove_dir_all(&self.root);
     }
 }

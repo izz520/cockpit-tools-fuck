@@ -1,0 +1,86 @@
+.delete-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: oklch(0.22 0.02 255 / 0.24);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 50;
+}
+
+.delete-modal {
+  width: min(420px, calc(100vw - 48px));
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-material-strong);
+  box-shadow: var(--shadow-modal);
+  backdrop-filter: var(--blur-material);
+  -webkit-backdrop-filter: var(--blur-material);
+}
+
+.delete-modal h2 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 18px;
+  line-height: 26px;
+}
+
+.delete-modal p {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  line-height: 20px;
+}
+
+.delete-modal-account {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-control);
+}
+
+.delete-modal-account span {
+  color: var(--color-error);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.delete-modal-account strong,
+.delete-modal-account code {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.delete-modal-account strong {
+  color: var(--color-text-strong);
+}
+
+.delete-modal-account code {
+  color: var(--color-text-muted);
+}
+
+.delete-modal-warning {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid oklch(0.7 0.14 27 / 0.32);
+  border-radius: 10px;
+  background: var(--color-error-soft);
+  color: var(--color-text);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.delete-modal footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

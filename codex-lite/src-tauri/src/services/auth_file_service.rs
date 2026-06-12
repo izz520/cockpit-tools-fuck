@@ -12,6 +12,16 @@ fn now_timestamp() -> i64 {
     chrono::Utc::now().timestamp()
 }
 
+/// Codex writes `last_refresh` as an RFC3339 timestamp with microsecond
+/// precision (e.g. `2025-02-20T14:30:45.123456Z`), not a Unix integer.
+fn now_last_refresh() -> serde_json::Value {
+    serde_json::Value::String(
+        chrono::Utc::now()
+            .format("%Y-%m-%dT%H:%M:%S%.6fZ")
+            .to_string(),
+    )
+}
+
 pub fn read_auth_file(path: &Path) -> AppResult<CodexAuthFile> {
     let content = fs::read_to_string(path).map_err(|err| {
         AppError::new(
@@ -137,6 +147,14 @@ fn extract_plan_type_from_payload(payload: Option<&JwtPayload>) -> Option<String
     trim_optional_ref(payload?.auth_data.as_ref()?.chatgpt_plan_type.as_deref())
 }
 
+/// Recovers the ChatGPT account id from an OAuth id_token's claims. Older builds
+/// stored accounts without `account_id`, but Codex needs it inside `tokens` for
+/// the auth file to be accepted, so we re-derive it from the JWT on switch.
+fn account_id_from_id_token(id_token: &str) -> Option<String> {
+    let payload = decode_jwt_payload(id_token).ok()?;
+    extract_account_id_from_payload(Some(&payload))
+}
+
 pub fn auth_file_from_account(account: &CodexAccount) -> AppResult<CodexAuthFile> {
     match account.auth_mode {
         CodexAuthMode::OAuth => {
@@ -147,17 +165,24 @@ pub fn auth_file_from_account(account: &CodexAccount) -> AppResult<CodexAuthFile
                     "Re-import this account before switching.",
                 )
             })?;
+            let account_id = account
+                .account_id
+                .clone()
+                .or_else(|| account_id_from_id_token(&tokens.id_token));
             Ok(CodexAuthFile {
-                auth_mode: Some("oauth".to_string()),
-                openai_api_key: None,
+                // Codex treats an absent auth_mode as ChatGPT/OAuth mode. Writing
+                // "oauth" here is not a value Codex recognizes and breaks login.
+                auth_mode: None,
+                // OAuth auth files carry OPENAI_API_KEY as an explicit null.
+                openai_api_key: Some(serde_json::Value::Null),
                 base_url: account.api_base_url.clone(),
                 tokens: Some(crate::models::auth::CodexAuthTokens {
                     id_token: tokens.id_token.clone(),
                     access_token: tokens.access_token.clone(),
                     refresh_token: tokens.refresh_token.clone(),
-                    account_id: account.account_id.clone(),
+                    account_id,
                 }),
-                last_refresh: Some(serde_json::json!(now_timestamp())),
+                last_refresh: Some(now_last_refresh()),
             })
         }
         CodexAuthMode::ApiKey => {
@@ -173,7 +198,7 @@ pub fn auth_file_from_account(account: &CodexAccount) -> AppResult<CodexAuthFile
                 openai_api_key: Some(serde_json::Value::String(api_key.clone())),
                 base_url: account.api_base_url.clone(),
                 tokens: None,
-                last_refresh: Some(serde_json::json!(now_timestamp())),
+                last_refresh: Some(now_last_refresh()),
             })
         }
     }
@@ -349,5 +374,55 @@ mod tests {
             .expect("view should serialize")
             .get("tokenBundle")
             .is_none());
+    }
+
+    #[test]
+    fn exports_oauth_auth_file_with_codex_snake_case_keys() {
+        let auth = parse_auth_json(OAUTH_FIXTURE).expect("OAuth fixture should parse");
+        let account = account_from_auth(auth).expect("OAuth fixture should project to account");
+        let exported = auth_file_from_account(&account).expect("OAuth account should export");
+        let json = serde_json::to_value(&exported).expect("auth file should serialize");
+
+        // Codex reads snake_case token keys; camelCase would fail to parse and force re-login.
+        let tokens = json.get("tokens").expect("tokens object should be present");
+        assert!(tokens.get("id_token").is_some());
+        assert!(tokens.get("access_token").is_some());
+        assert!(tokens.get("idToken").is_none());
+        assert!(tokens.get("accessToken").is_none());
+
+        // last_refresh must be an RFC3339 string, not an integer timestamp.
+        let last_refresh = json
+            .get("last_refresh")
+            .and_then(|value| value.as_str())
+            .expect("last_refresh should serialize as a string");
+        assert!(last_refresh.ends_with('Z'));
+        assert!(last_refresh.contains('T'));
+
+        // OAuth auth files omit auth_mode and carry OPENAI_API_KEY as null.
+        assert!(json.get("auth_mode").is_none());
+        assert!(json.get("OPENAI_API_KEY").map(|v| v.is_null()).unwrap_or(false));
+        // account_id must be present inside tokens for Codex to accept the file.
+        assert!(tokens.get("account_id").is_some());
+    }
+
+    #[test]
+    fn reimports_camel_case_auth_file_written_by_older_builds() {
+        // Older codex-lite builds wrote camelCase; those files must still import.
+        let camel = serde_json::json!({
+            "authMode": "oauth",
+            "tokens": {
+                "idToken": "legacy-id-token",
+                "accessToken": "legacy-access",
+                "refreshToken": "legacy-refresh",
+                "accountId": "acct_legacy"
+            },
+            "lastRefresh": 1710000000
+        })
+        .to_string();
+
+        let auth = parse_auth_json(&camel).expect("camelCase auth should still parse");
+        let tokens = auth.tokens.expect("tokens should be read via aliases");
+        assert_eq!(tokens.access_token, "legacy-access");
+        assert_eq!(tokens.account_id.as_deref(), Some("acct_legacy"));
     }
 }

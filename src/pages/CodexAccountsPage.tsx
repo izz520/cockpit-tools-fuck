@@ -4713,21 +4713,6 @@ export function CodexAccountsPage() {
     [accounts, refreshApiKeyUsage, resolveUsageProviderForApiKeyAccount],
   );
 
-  const canRefreshApiKeyUsage = useCallback(
-    (account: CodexAccount, provider?: CodexModelProvider | null): boolean => {
-      if (!isCodexApiKeyAccount(account) || isCodexNewApiAccount(account)) {
-        return false;
-      }
-      const targetProvider =
-        provider ?? resolveUsageProviderForApiKeyAccount(account);
-      const apiKey = (account.openai_api_key || "").trim();
-      const baseUrl =
-        targetProvider?.baseUrl.trim() || (account.api_base_url || "").trim();
-      return Boolean(apiKey && baseUrl);
-    },
-    [resolveUsageProviderForApiKeyAccount],
-  );
-
   const refreshApiKeyUsageForAccounts = useCallback(
     async (targetAccounts: CodexAccount[]) => {
       const apiKeyAccounts = targetAccounts.filter((account) => {
@@ -4826,19 +4811,6 @@ export function CodexAccountsPage() {
         : `${formatted} ${normalizedUnit}`;
     },
     [],
-  );
-
-  const formatApiKeyUsageBalance = useCallback(
-    (summary?: CodexModelProviderUsageSummary): string | null => {
-      if (
-        typeof summary?.balance !== "number" ||
-        !Number.isFinite(summary.balance)
-      ) {
-        return null;
-      }
-      return formatApiKeyUsageMoney(summary.balance, summary.unit);
-    },
-    [formatApiKeyUsageMoney],
   );
 
   const formatApiKeyUsageQuotaValue = useCallback(
@@ -5068,267 +5040,6 @@ export function CodexAccountsPage() {
       return formatApiKeyUsageDetailValue(detail, summary?.unit);
     },
     [findApiKeyUsageDetail, formatApiKeyUsageDetailValue],
-  );
-
-  const renderApiKeyUsagePanel = useCallback(
-    (
-      account: CodexAccount,
-      provider: CodexModelProvider | null,
-      variant: "card" | "table" = "card",
-    ): ReactElement => {
-      const usageState = apiKeyUsageMap[account.id];
-      const summary = usageState?.summary;
-      const loading = usageState?.loading === true;
-      const apiKey = (account.openai_api_key || "").trim();
-      const baseUrl =
-        provider?.baseUrl.trim() || (account.api_base_url || "").trim();
-      const canRefresh = Boolean(apiKey && baseUrl);
-      const usageMode = resolveApiKeyUsageMode(summary);
-      const isNewApiUsage = usageMode === "new_api";
-      const isSub2ApiUsage = usageMode === "sub2api";
-      const usedPercent = formatApiKeyUsagePercent(summary);
-      if (variant === "card" && summary && isNewApiUsage) {
-        const grantedRaw = Number(
-          findApiKeyUsageDetail(summary, "totalGranted")?.value ?? NaN,
-        );
-        const availableRaw = Number(
-          findApiKeyUsageDetail(summary, "totalAvailable")?.value ?? NaN,
-        );
-        const grantedText = Number.isFinite(grantedRaw)
-          ? formatApiKeyUsageMoney(grantedRaw, summary.unit)
-          : formatApiKeyUsageDetailByKey(summary, "totalGranted");
-        const availableText = Number.isFinite(availableRaw)
-          ? formatApiKeyUsageMoney(availableRaw, summary.unit)
-          : formatApiKeyUsageDetailByKey(summary, "totalAvailable");
-        const expiresText = formatApiKeyUsageDetailByKey(summary, "expiresAt");
-        const unlimitedText = t("codex.newApi.quota.unlimited", "不限量");
-        const quotaValueText =
-          summary.quotaUnlimited === true
-            ? unlimitedText
-            : `${availableText} / ${grantedText}`;
-        const quotaBarWidth =
-          summary.quotaUnlimited === true ? 100 : usedPercent;
-        return (
-          <div
-            className="quota-item codex-api-key-quota-item new-api"
-            title={`${t("codex.cockpitApi.balance", "额度")}：${quotaValueText}`}
-          >
-            <div className="quota-header">
-              <Database size={14} />
-              <span className="quota-label">
-                {t("codex.cockpitApi.balance", "额度")}
-              </span>
-              <span className="quota-pct high">{quotaValueText}</span>
-            </div>
-            <div className="quota-bar-track">
-              <div
-                className="quota-bar high"
-                style={{ width: `${quotaBarWidth}%` }}
-              />
-            </div>
-            {expiresText !== "-" && (
-              <span className="quota-reset">
-                {t("codex.modelProviders.usage.fields.expiresAt", "过期时间")}：
-                {expiresText}
-              </span>
-            )}
-          </div>
-        );
-      }
-      if (variant === "card" && summary && isSub2ApiUsage) {
-        return (
-          <div className="codex-api-key-usage-panel sub2api">
-            <div className="codex-api-key-usage-grid">
-              <div>
-                <span>
-                  {t("codex.modelProviders.usage.accountBalance", "账户余额")}
-                </span>
-                <strong>
-                  {formatApiKeyUsageQuotaValue(
-                    summary,
-                    summary.remaining ??
-                      summary.balance ??
-                      summary.quotaRemaining,
-                  )}
-                </strong>
-              </div>
-              <div>
-                <span>
-                  {t(
-                    "codex.modelProviders.usage.fields.todayRequests",
-                    "今日请求",
-                  )}
-                </span>
-                <strong>
-                  {formatCockpitApiInteger(summary.todayRequests ?? 0)}
-                </strong>
-              </div>
-              <div>
-                <span>
-                  {t(
-                    "codex.modelProviders.usage.fields.todayTokens",
-                    "今日 Token",
-                  )}
-                </span>
-                <strong>
-                  {formatCockpitApiTokenCount(summary.todayTotalTokens ?? 0)}
-                </strong>
-              </div>
-            </div>
-          </div>
-        );
-      }
-      if (summary && !usageMode) {
-        return <></>;
-      }
-      return (
-        <div
-          className={`codex-api-key-usage-panel ${variant} ${summary ? "" : "empty"}`}
-        >
-          {summary ? (
-            <>
-              <div className="codex-api-key-usage-grid">
-                {isNewApiUsage ? (
-                  <>
-                    <div>
-                      <span>
-                        {t(
-                          "codex.modelProviders.usage.fields.totalGranted",
-                          "授予额度",
-                        )}
-                      </span>
-                      <strong>
-                        {(() => {
-                          const raw = Number(
-                            findApiKeyUsageDetail(summary, "totalGranted")
-                              ?.value ?? NaN,
-                          );
-                          return Number.isFinite(raw)
-                            ? formatApiKeyUsageMoney(raw, summary.unit)
-                            : formatApiKeyUsageDetailByKey(
-                                summary,
-                                "totalGranted",
-                              );
-                        })()}
-                      </strong>
-                    </div>
-                    <div>
-                      <span>
-                        {t(
-                          "codex.modelProviders.usage.fields.totalAvailable",
-                          "可用额度",
-                        )}
-                      </span>
-                      <strong>
-                        {(() => {
-                          const raw = Number(
-                            findApiKeyUsageDetail(summary, "totalAvailable")
-                              ?.value ?? NaN,
-                          );
-                          return Number.isFinite(raw)
-                            ? formatApiKeyUsageMoney(raw, summary.unit)
-                            : formatApiKeyUsageDetailByKey(
-                                summary,
-                                "totalAvailable",
-                              );
-                        })()}
-                      </strong>
-                    </div>
-                    <div>
-                      <span>
-                        {t(
-                          "codex.modelProviders.usage.fields.expiresAt",
-                          "过期时间",
-                        )}
-                      </span>
-                      <strong>
-                        {formatApiKeyUsageDetailByKey(summary, "expiresAt")}
-                      </strong>
-                    </div>
-                  </>
-                ) : isSub2ApiUsage ? (
-                  <>
-                    <div>
-                      <span>
-                        {t(
-                          "codex.modelProviders.usage.accountBalance",
-                          "账户余额",
-                        )}
-                      </span>
-                      <strong>
-                        {formatApiKeyUsageQuotaValue(
-                          summary,
-                          summary.remaining ??
-                            summary.balance ??
-                            summary.quotaRemaining,
-                        )}
-                      </strong>
-                    </div>
-                    <div>
-                      <span>
-                        {t(
-                          "codex.modelProviders.usage.fields.todayRequests",
-                          "今日请求",
-                        )}
-                      </span>
-                      <strong>
-                        {formatCockpitApiInteger(summary.todayRequests ?? 0)}
-                      </strong>
-                    </div>
-                    <div>
-                      <span>
-                        {t(
-                          "codex.modelProviders.usage.fields.todayTokens",
-                          "今日 Token",
-                        )}
-                      </span>
-                      <strong>
-                        {formatCockpitApiTokenCount(
-                          summary.todayTotalTokens ?? 0,
-                        )}
-                      </strong>
-                    </div>
-                  </>
-                ) : null}
-              </div>
-              {isNewApiUsage ? (
-                <div className="codex-api-key-usage-progress">
-                  <div className="cockpit-api-progress-track">
-                    <div
-                      className="cockpit-api-progress-bar"
-                      style={{ width: `${usedPercent}%` }}
-                    />
-                  </div>
-                  <span>{usedPercent}%</span>
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <div className="codex-api-key-usage-empty">
-              {loading
-                ? t("codex.modelProviders.usage.loading", "正在查询额度...")
-                : usageState?.error
-                  ? null
-                  : canRefresh
-                    ? t("codex.modelProviders.usage.pending", "等待查询额度")
-                    : t("codex.modelProviders.usage.noKey", "暂无可查询额度")}
-            </div>
-          )}
-        </div>
-      );
-    },
-    [
-      apiKeyUsageMap,
-      formatApiKeyUsagePercent,
-      formatApiKeyUsageMoney,
-      formatApiKeyUsageBalance,
-      formatApiKeyUsageQuotaValue,
-      formatApiKeyUsageDetailByKey,
-      canRefreshApiKeyUsage,
-      refreshApiKeyUsage,
-      setApiKeyUsageDetailAccountId,
-      t,
-    ],
   );
 
   const closeApiKeyCredentialsModal = useCallback(() => {
@@ -7364,7 +7075,10 @@ export function CodexAccountsPage() {
       const isCurrent = overviewCurrentAccountId === account.id;
       const isSelected = selected.has(account.id);
       const isApiKeyAccount = isCodexApiKeyAccount(account);
-      const compactQuotaItems = resolveCompactQuotaItems(presentation);
+      const compactQuotaItems = isApiKeyAccount
+        ? []
+        : resolveCompactQuotaItems(presentation);
+      const apiProviderName = resolveApiProviderDisplayName(account);
       const subscriptionInfo = resolveSubscriptionPresentation(account);
       const showCompactExpiry =
         !isApiKeyAccount && subscriptionInfo.bucket !== "active";
@@ -7394,20 +7108,30 @@ export function CodexAccountsPage() {
             {maskAccountText(presentation.displayName)}
           </span>
           <div className="codex-compact-quotas">
-            {compactQuotaItems.map((item) => (
+            {isApiKeyAccount ? (
               <span
-                key={`${account.id}-${item.key}`}
-                className={`codex-compact-quota codex-compact-quota-${item.key}`}
-                title={item.titleText}
+                className="codex-compact-api-key"
+                title={`${t("codex.api.provider.label", "供应商")}：${apiProviderName}`}
               >
-                <span className="codex-compact-dot" />
-                <span
-                  className={`codex-compact-quota-value ${item.quotaClass}`}
-                >
-                  {item.valueText}
-                </span>
+                <KeyRound size={13} />
+                <span>{apiProviderName}</span>
               </span>
-            ))}
+            ) : (
+              compactQuotaItems.map((item) => (
+                <span
+                  key={`${account.id}-${item.key}`}
+                  className={`codex-compact-quota codex-compact-quota-${item.key}`}
+                  title={item.titleText}
+                >
+                  <span className="codex-compact-dot" />
+                  <span
+                    className={`codex-compact-quota-value ${item.quotaClass}`}
+                  >
+                    {item.valueText}
+                  </span>
+                </span>
+              ))
+            )}
             {showCompactExpiry && (
               <span className="codex-compact-expiry-wrap">
                 <span
@@ -7608,7 +7332,10 @@ export function CodexAccountsPage() {
               </span>
             )}
             {isCurrent && (
-              <span className="current-tag">{t("codex.current", "当前")}</span>
+              <span className="current-tag">
+                <Check size={12} />
+                {t("codex.current", "当前")}
+              </span>
             )}
             {hasQuotaError && (
               <span
@@ -7698,87 +7425,92 @@ export function CodexAccountsPage() {
               )}
             </div>
           )}
-          <div className="codex-quota-section">
-            {isApiKeyAccount && !isNewApiAccount ? (
-              renderApiKeyUsagePanel(account, apiKeyUsageProvider)
-            ) : (
-              <>
-                {hasQuotaError && (
-                  <div
-                    className={`quota-error-inline ${isQuotaRefreshNotice ? "quota-refresh-notice" : ""}`}
-                    title={accountIssueMeta.rawMessage}
-                  >
-                    {isQuotaRefreshNotice ? (
-                      <Info size={14} />
-                    ) : (
-                      <CircleAlert size={14} />
-                    )}
-                    <span>{accountIssueMeta.displayText}</span>
-                    {showReauthorizeAction && (
-                      <button
-                        className="btn btn-sm btn-outline"
-                        onClick={() => openCodexAddModal("oauth", account)}
-                        title={t("common.shared.addModal.oauth", "OAuth 授权")}
-                      >
-                        {t("common.shared.addModal.oauth", "OAuth 授权")}
-                      </button>
-                    )}
-                  </div>
-                )}
-                {cockpitApiAccountBalanceText && (
-                  <div className="codex-account-balance-line">
-                    <span>
-                      {t(
-                        "codex.modelProviders.usage.accountBalance",
-                        "账户余额",
-                      )}
-                      ：
-                    </span>
-                    <strong>{cockpitApiAccountBalanceText}</strong>
-                  </div>
-                )}
-                {quotaItems.map((item) => {
-                  const QuotaIcon =
-                    item.key === "secondary"
-                      ? Calendar
-                      : item.key === "code_review"
-                        ? BookOpen
-                        : item.key === "new_api_quota"
-                          ? Database
-                          : Clock;
-                  return (
-                    <div
-                      key={item.key}
-                      className="quota-item"
-                      title={item.hintText}
+          {isApiKeyAccount ? (
+            <div className="codex-api-key-connection-card">
+              <div>
+                <KeyRound size={16} />
+                <span>{t("codex.apiKey.connection", "API Key 连接")}</span>
+              </div>
+              <strong title={apiProviderLine}>{apiProviderName}</strong>
+              <small title={apiBaseUrlLine}>{apiBaseUrlText}</small>
+            </div>
+          ) : (
+            <div className="codex-quota-section">
+              {hasQuotaError && (
+                <div
+                  className={`quota-error-inline ${isQuotaRefreshNotice ? "quota-refresh-notice" : ""}`}
+                  title={accountIssueMeta.rawMessage}
+                >
+                  {isQuotaRefreshNotice ? (
+                    <Info size={14} />
+                  ) : (
+                    <CircleAlert size={14} />
+                  )}
+                  <span>{accountIssueMeta.displayText}</span>
+                  {showReauthorizeAction && (
+                    <button
+                      className="btn btn-sm btn-outline"
+                      onClick={() => openCodexAddModal("oauth", account)}
+                      title={t("common.shared.addModal.oauth", "OAuth 授权")}
                     >
-                      <div className="quota-header">
-                        <QuotaIcon size={14} />
-                        <span className="quota-label">{item.label}</span>
-                        <span className={`quota-pct ${item.quotaClass}`}>
-                          {item.valueText}
-                        </span>
-                      </div>
-                      <div className="quota-bar-track">
-                        <div
-                          className={`quota-bar ${item.quotaClass}`}
-                          style={{ width: `${item.percentage}%` }}
-                        />
-                      </div>
-                      {item.resetText && (
-                        <span className="quota-reset">{item.resetText}</span>
-                      )}
+                      {t("common.shared.addModal.oauth", "OAuth 授权")}
+                    </button>
+                  )}
+                </div>
+              )}
+              {cockpitApiAccountBalanceText && (
+                <div className="codex-account-balance-line">
+                  <span>
+                    {t(
+                      "codex.modelProviders.usage.accountBalance",
+                      "账户余额",
+                    )}
+                    ：
+                  </span>
+                  <strong>{cockpitApiAccountBalanceText}</strong>
+                </div>
+              )}
+              {quotaItems.map((item) => {
+                const QuotaIcon =
+                  item.key === "secondary"
+                    ? Calendar
+                    : item.key === "code_review"
+                      ? BookOpen
+                      : item.key === "new_api_quota"
+                        ? Database
+                        : Clock;
+                return (
+                  <div
+                    key={item.key}
+                    className="quota-item"
+                    title={item.hintText}
+                  >
+                    <div className="quota-header">
+                      <QuotaIcon size={14} />
+                      <span className="quota-label">{item.label}</span>
+                      <span className={`quota-pct ${item.quotaClass}`}>
+                        {item.valueText}
+                      </span>
                     </div>
-                  );
-                })}
-                {quotaItems.length === 0 && !cockpitApiAccountBalanceText && (
-                  <div className="quota-empty">
-                    {t("common.shared.quota.noData", "暂无配额数据")}
+                    <div className="quota-bar-track">
+                      <div
+                        className={`quota-bar ${item.quotaClass}`}
+                        style={{ width: `${item.percentage}%` }}
+                      />
+                    </div>
+                    {item.resetText && (
+                      <span className="quota-reset">{item.resetText}</span>
+                    )}
                   </div>
-                )}
-              </>
-            )}
-          </div>
+                );
+              })}
+              {quotaItems.length === 0 && !cockpitApiAccountBalanceText && (
+                <div className="quota-empty">
+                  {t("common.shared.quota.noData", "暂无配额数据")}
+                </div>
+              )}
+            </div>
+          )}
           {!isApiKeyAccount && (
             <div
               className={`codex-subscription-footer ${subscriptionInfo.tone}`}
@@ -7908,33 +7640,17 @@ export function CodexAccountsPage() {
                     <Play size={14} />
                   )}
                 </button>
-                {(!isApiKeyAccount ||
-                  isNewApiAccount ||
-                  canRefreshApiKeyUsage(account, apiKeyUsageProvider)) && (
+                {!isApiKeyAccount && (
                   <button
                     className="card-action-btn"
-                    onClick={() =>
-                      canRefreshApiKeyUsage(account, apiKeyUsageProvider)
-                        ? void refreshApiKeyUsage(account, apiKeyUsageProvider)
-                        : handleRefresh(account.id)
-                    }
-                    disabled={
-                      canRefreshApiKeyUsage(account, apiKeyUsageProvider)
-                        ? apiKeyUsageMap[account.id]?.loading === true
-                        : refreshing === account.id
-                    }
+                    onClick={() => handleRefresh(account.id)}
+                    disabled={refreshing === account.id}
                     title={t("common.shared.refreshQuota", "刷新配额")}
                   >
                     <RotateCw
                       size={14}
                       className={
-                        canRefreshApiKeyUsage(account, apiKeyUsageProvider)
-                          ? apiKeyUsageMap[account.id]?.loading === true
-                            ? "loading-spinner"
-                            : ""
-                          : refreshing === account.id
-                            ? "loading-spinner"
-                            : ""
+                        refreshing === account.id ? "loading-spinner" : ""
                       }
                     />
                   </button>
@@ -8909,6 +8625,7 @@ export function CodexAccountsPage() {
                 )}
                 {isCurrent && (
                   <span className="mini-tag current">
+                    <Check size={11} />
                     {t("codex.current", "当前")}
                   </span>
                 )}
@@ -9000,18 +8717,7 @@ export function CodexAccountsPage() {
           </td>
           <td>
             {isApiKeyAccount ? (
-              isNewApiAccount ? (
-                <div
-                  className="codex-subscription-table-cell"
-                  title={presentation.planLabel}
-                >
-                  <span className="codex-subscription-badge new-api-exclusive">
-                    {presentation.planLabel}
-                  </span>
-                </div>
-              ) : (
-                <span className="codex-subscription-table-empty">-</span>
-              )
+              <span className="codex-subscription-table-empty">-</span>
             ) : (
               <div
                 className="codex-subscription-table-cell"
@@ -9047,8 +8753,15 @@ export function CodexAccountsPage() {
             )}
           </td>
           <td>
-            {isApiKeyAccount && !isNewApiAccount ? (
-              renderApiKeyUsagePanel(account, apiKeyUsageProvider, "table")
+            {isApiKeyAccount ? (
+              <div className="codex-api-key-connection-card table">
+                <div>
+                  <KeyRound size={14} />
+                  <span>{t("codex.apiKey.connection", "API Key 连接")}</span>
+                </div>
+                <strong title={apiProviderLine}>{apiProviderName}</strong>
+                <small title={apiBaseUrlLine}>{apiBaseUrlText}</small>
+              </div>
             ) : (
               <>
                 <div className="quota-grid">
@@ -9204,34 +8917,16 @@ export function CodexAccountsPage() {
                   <Play size={14} />
                 )}
               </button>
-              {(!isApiKeyAccount ||
-                isNewApiAccount ||
-                canRefreshApiKeyUsage(account, apiKeyUsageProvider)) && (
+              {!isApiKeyAccount && (
                 <button
                   className="action-btn"
-                  onClick={() =>
-                    canRefreshApiKeyUsage(account, apiKeyUsageProvider)
-                      ? void refreshApiKeyUsage(account, apiKeyUsageProvider)
-                      : handleRefresh(account.id)
-                  }
-                  disabled={
-                    canRefreshApiKeyUsage(account, apiKeyUsageProvider)
-                      ? apiKeyUsageMap[account.id]?.loading === true
-                      : refreshing === account.id
-                  }
+                  onClick={() => handleRefresh(account.id)}
+                  disabled={refreshing === account.id}
                   title={t("common.shared.refreshQuota", "刷新配额")}
                 >
                   <RotateCw
                     size={14}
-                    className={
-                      canRefreshApiKeyUsage(account, apiKeyUsageProvider)
-                        ? apiKeyUsageMap[account.id]?.loading === true
-                          ? "loading-spinner"
-                          : ""
-                        : refreshing === account.id
-                          ? "loading-spinner"
-                          : ""
-                    }
+                    className={refreshing === account.id ? "loading-spinner" : ""}
                   />
                 </button>
               )}
@@ -12789,9 +12484,10 @@ export function CodexAccountsPage() {
                     {customSortAccounts.map((account, index) => {
                       const presentation = resolvePresentation(account);
                       const isCurrent = overviewCurrentAccountId === account.id;
+                      const isApiKeyAccount = isCodexApiKeyAccount(account);
+                      const apiProviderName = resolveApiProviderDisplayName(account);
                       const quotaItems =
-                        isCodexApiKeyAccount(account) &&
-                        !isCodexNewApiAccount(account)
+                        isApiKeyAccount
                           ? []
                           : presentation.quotaItems
                               .filter((item) => item.key !== "code_review")
@@ -12854,6 +12550,7 @@ export function CodexAccountsPage() {
                                 </span>
                                 {isCurrent && (
                                   <span className="mini-tag current">
+                                    <Check size={11} />
                                     {t("codex.current", "当前")}
                                   </span>
                                 )}
@@ -12864,7 +12561,12 @@ export function CodexAccountsPage() {
                                 </span>
                               </div>
                               <div className="codex-custom-sort-quota-line">
-                                {quotaItems.length > 0 ? (
+                                {isApiKeyAccount ? (
+                                  <span className="codex-custom-sort-api-key">
+                                    <KeyRound size={13} />
+                                    {apiProviderName}
+                                  </span>
+                                ) : quotaItems.length > 0 ? (
                                   quotaItems.map((item) => (
                                     <span
                                       key={`${account.id}-${item.key}`}

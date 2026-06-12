@@ -1,9 +1,5 @@
 .account-row {
   width: 100%;
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
-  gap: 12px;
-  padding: 14px 16px;
   border-bottom: 1px solid var(--color-border);
   background: transparent;
   transition: background 140ms cubic-bezier(0.2, 0, 0, 1);
@@ -17,9 +13,38 @@
   background: var(--color-primary-soft);
 }
 
+.account-row.expanded {
+  background: var(--color-surface-muted);
+}
+
+.account-summary {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 10px 40px minmax(0, 1fr) minmax(96px, 168px) auto 16px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.account-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--color-border-strong);
+}
+
+.account-status-dot.is-current {
+  background: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
 .account-avatar {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 11px;
   display: grid;
   place-items: center;
@@ -28,20 +53,6 @@
   border: 1px solid var(--color-border);
   font-weight: 760;
   box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.52);
-}
-
-.account-row-main {
-  min-width: 0;
-  display: grid;
-  gap: 10px;
-}
-
-.account-row-header {
-  min-width: 0;
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
 }
 
 .account-title-group {
@@ -66,6 +77,54 @@
   color: var(--color-text-muted);
   font-size: 12px;
   line-height: 16px;
+}
+
+.account-summary-quota {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-summary-quota-track {
+  flex: 1;
+  min-width: 0;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-control);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.account-summary-quota-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.account-summary-quota-fill.quota-success {
+  background: var(--color-success);
+}
+
+.account-summary-quota-fill.quota-warning {
+  background: var(--color-warning);
+}
+
+.account-summary-quota-fill.quota-error {
+  background: var(--color-error);
+}
+
+.account-summary-quota-value {
+  flex: 0 0 auto;
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.account-summary-quota-na {
+  color: var(--color-text-muted);
+  font-size: 12px;
 }
 
 .account-badges {
@@ -101,86 +160,135 @@
   border-color: oklch(0.7 0.14 27 / 0.34);
 }
 
-.account-row-body {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1.1fr) auto;
-  gap: 12px;
-  align-items: center;
-}
-
-.account-meta-grid {
-  min-width: 0;
-  margin: 0;
-  display: grid;
-  grid-template-columns: minmax(72px, 0.8fr) minmax(120px, 1.2fr);
-  gap: 8px;
-}
-
-.account-meta-grid div {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-}
-
-.account-meta-grid dt {
+.account-chevron {
   color: var(--color-text-muted);
-  font-size: 11px;
-  line-height: 15px;
+  transition: transform 160ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-.account-meta-grid dd {
-  margin: 0;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: var(--color-text);
-  font-size: 12px;
-  line-height: 16px;
+.account-row.expanded .account-chevron {
+  transform: rotate(90deg);
 }
 
-.account-quotas {
-  min-width: 0;
+.account-detail-panel {
+  display: grid;
+  gap: 16px;
+  padding: 4px 16px 18px 78px;
+}
+
+.account-detail-quotas {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 16px;
 }
 
 .account-quota-na {
-  min-height: 42px;
   display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 3px;
+  padding: 14px;
   border: 1px solid var(--color-border);
-  border-radius: 9px;
-  color: var(--color-text-muted);
+  border-radius: 10px;
+  color: var(--color-text);
   background: var(--color-control);
-  font-size: 12px;
-  line-height: 16px;
+  font-size: 13px;
+  line-height: 18px;
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.48);
 }
 
 .account-quota-na strong {
-  color: var(--color-text);
+  color: var(--color-text-strong);
   font-weight: 700;
 }
 
-.account-row-actions {
+.account-quota-na span {
+  color: var(--color-text-muted);
+}
+
+.account-detail-error {
+  display: grid;
+  gap: 4px;
+  color: var(--color-error);
+  background: var(--color-error-soft);
+  border: 1px solid oklch(0.7 0.14 27 / 0.32);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.account-detail-error strong {
+  color: var(--color-error);
+  font-weight: 600;
+}
+
+.account-detail-error span {
+  color: var(--color-text);
+}
+
+.account-detail-dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  margin: 0;
+}
+
+.account-detail-dl div {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+}
+
+.account-detail-dl dt {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.account-detail-dl dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+  font-size: 12px;
+}
+
+.account-detail-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.account-detail-actions-primary {
+  display: flex;
   gap: 8px;
   align-items: center;
 }
 
 @media (max-width: 980px) {
-  .account-row-body {
+  .account-summary {
+    grid-template-columns: 10px 40px minmax(0, 1fr) auto 16px;
+  }
+
+  .account-summary-quota {
+    display: none;
+  }
+
+  .account-detail-panel {
+    padding-left: 16px;
+  }
+
+  .account-detail-quotas,
+  .account-detail-dl {
     grid-template-columns: 1fr;
+  }
+
+  .account-detail-actions {
+    flex-direction: column-reverse;
     align-items: stretch;
   }
 
-  .account-row-actions {
-    justify-content: flex-start;
+  .account-detail-actions-primary {
+    justify-content: flex-end;
   }
 }

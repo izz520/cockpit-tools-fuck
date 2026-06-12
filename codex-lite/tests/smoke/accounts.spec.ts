@@ -70,6 +70,9 @@ async function installTauriMock(page: Page, options: TauriMockOptions): Promise<
           if (command === 'refresh_all_codex_quotas') {
             return accounts;
           }
+          if (command === 'delete_codex_account') {
+            return null;
+          }
           throw {
             code: 'SMOKE_UNKNOWN_COMMAND',
             message: `Unhandled smoke command: ${command}`,
@@ -107,7 +110,7 @@ test.describe('Accounts page smoke', () => {
     await expectNoHorizontalOverflow(page);
   });
 
-  test('renders account list with direct actions and quota states', async ({ page }) => {
+  test('renders account list with accordion details and quota states', async ({ page }) => {
     await installTauriMock(page, {
       accounts: [oauthAccount, apiKeyAccount],
       currentAccount: oauthAccount,
@@ -122,11 +125,59 @@ test.describe('Accounts page smoke', () => {
     await expect(oauthRow).toBeVisible();
     await expect(apiKeyRow).toBeVisible();
     await expect(oauthRow.locator('.badge-current')).toHaveText('Current');
+
+    // The current account starts expanded, so its detail quota is visible.
     await expect(oauthRow.getByText('Hourly')).toBeVisible();
     await expect(oauthRow.getByText('Weekly')).toBeVisible();
     await expect(oauthRow.getByText('acct_team_codex_lite_smoke_long_identifier_001')).toBeVisible();
+
+    // The API key account is collapsed; expand it to reveal its detail panel.
+    await apiKeyRow.locator('.account-summary').click();
     await expect(apiKeyRow.getByLabel('Quota not applicable')).toBeVisible();
     await expect(apiKeyRow.getByRole('button', { name: 'Switch' })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test('filters accounts by the search box', async ({ page }) => {
+    await installTauriMock(page, {
+      accounts: [oauthAccount, apiKeyAccount],
+      currentAccount: oauthAccount,
+    });
+
+    await page.goto('/');
+
+    const oauthRow = page.locator('.account-row').filter({ hasText: 'Work Codex OAuth' });
+    const apiKeyRow = page.locator('.account-row').filter({ hasText: 'API Key Only' });
+    await expect(oauthRow).toBeVisible();
+    await expect(apiKeyRow).toBeVisible();
+
+    await page.getByLabel('Search accounts').fill('API Key Only');
+    await expect(apiKeyRow).toBeVisible();
+    await expect(oauthRow).toHaveCount(0);
+
+    await page.getByLabel('Search accounts').fill('no-such-account');
+    await expect(page.getByText('No accounts match')).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test('removes an account through the confirm dialog', async ({ page }) => {
+    await installTauriMock(page, {
+      accounts: [oauthAccount, apiKeyAccount],
+      currentAccount: oauthAccount,
+    });
+
+    await page.goto('/');
+
+    const apiKeyRow = page.locator('.account-row').filter({ hasText: 'API Key Only' });
+    await apiKeyRow.locator('.account-summary').click();
+    await apiKeyRow.getByRole('button', { name: 'Delete' }).click();
+
+    const dialog = page.getByRole('dialog', { name: 'Remove this account?' });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Remove account' }).click();
+
+    await expect(page.locator('.account-row').filter({ hasText: 'API Key Only' })).toHaveCount(0);
+    await expect(page.locator('.account-row').filter({ hasText: 'Work Codex OAuth' })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 
@@ -140,7 +191,7 @@ test.describe('Accounts page smoke', () => {
     await page.keyboard.press('Tab');
 
     const activeLabels = [];
-    for (let index = 0; index < 14; index += 1) {
+    for (let index = 0; index < 16; index += 1) {
       activeLabels.push(
         await page.evaluate(() => {
           const active = document.activeElement;

@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use crate::infra::{atomic_write, paths};
+use crate::infra::{atomic_write, codex_keychain, paths};
 use crate::models::account::SwitchResult;
 use crate::models::error::{AppError, AppResult};
 use crate::services::{account_service, auth_file_service};
@@ -54,6 +54,23 @@ fn switch_account_with_writer(
             let _ = fs::copy(path, &auth_path);
         }
         return Err(write_error);
+    }
+
+    // On macOS, Codex reads OAuth credentials from the login keychain too. Update
+    // it so the switch fully takes effect. Failure here is non-fatal: auth.json is
+    // already written, so we log and continue rather than abort the switch.
+    if matches!(account.auth_mode, crate::models::account::CodexAuthMode::OAuth) {
+        if let Some(codex_home) = auth_path.parent() {
+            if let Ok(auth_json) = std::str::from_utf8(&content) {
+                if let Err(keychain_error) = codex_keychain::write_codex_keychain(codex_home, auth_json) {
+                    tracing::warn!(
+                        code = keychain_error.code,
+                        message = keychain_error.message,
+                        "failed to update Codex login keychain during switch"
+                    );
+                }
+            }
+        }
     }
 
     let view = account_service::mark_current(&account_id)?;
@@ -111,7 +128,8 @@ mod tests {
             stored.current_account_id.as_deref(),
             Some(account_id.as_str())
         );
-        assert_eq!(written_auth.auth_mode.as_deref(), Some("oauth"));
+        // OAuth auth files omit auth_mode (Codex treats absence as ChatGPT mode).
+        assert!(written_auth.auth_mode.is_none());
         assert!(written_auth.tokens.is_some());
     }
 

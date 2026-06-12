@@ -1411,7 +1411,7 @@
 .codex-account-card.current {
   border-color: var(--primary);
   box-shadow:
-    0 0 0 2px var(--primary-light),
+    0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent),
     var(--shadow-md);
 }
 
@@ -1501,13 +1501,29 @@
 }
 
 .codex-account-card .current-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   flex-shrink: 0;
-  padding: 3px 10px;
-  background: var(--success);
-  color: white;
+  padding: 4px 9px;
+  background: color-mix(in srgb, var(--primary) 12%, var(--bg-card));
+  color: var(--primary);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 750;
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent);
   border-radius: var(--radius-full);
+}
+
+.codex-account-card .current-tag svg,
+.codex-accounts-page .mini-tag.current svg {
+  flex-shrink: 0;
+}
+
+.codex-accounts-page .mini-tag.current {
+  gap: 3px;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, var(--bg-card));
+  border-color: color-mix(in srgb, var(--primary) 24%, transparent);
 }
 
 .codex-account-card .tier-badge,
@@ -1995,6 +2011,51 @@
   gap: 8px;
 }
 
+.codex-api-key-connection-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, var(--border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--primary) 4%, var(--bg-secondary));
+  color: var(--text-secondary);
+}
+
+.codex-api-key-connection-card.table {
+  min-width: 220px;
+  max-width: 300px;
+}
+
+.codex-api-key-connection-card > div {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 750;
+  color: color-mix(in srgb, var(--primary) 76%, var(--text-primary));
+}
+
+.codex-api-key-connection-card strong,
+.codex-api-key-connection-card small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.codex-api-key-connection-card strong {
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.codex-api-key-connection-card small {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
 .codex-api-key-usage-panel.empty {
   align-items: center;
   justify-content: center;
@@ -2299,6 +2360,32 @@
   gap: 8px;
   min-width: 0;
   flex-shrink: 0;
+}
+
+.codex-accounts-page .codex-compact-api-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 150px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 7%, var(--bg-secondary));
+  color: color-mix(in srgb, var(--primary) 72%, var(--text-secondary));
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.codex-accounts-page .codex-compact-api-key svg,
+.codex-custom-sort-api-key svg {
+  flex-shrink: 0;
+}
+
+.codex-accounts-page .codex-compact-api-key span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .codex-accounts-page .codex-compact-quota {
@@ -3272,6 +3359,22 @@
 
 .codex-custom-sort-quota-empty {
   color: var(--text-muted);
+}
+
+.codex-custom-sort-api-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 7%, var(--bg-secondary));
+  color: color-mix(in srgb, var(--primary) 72%, var(--text-secondary));
+  font-size: 12px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .codex-custom-sort-row-actions {

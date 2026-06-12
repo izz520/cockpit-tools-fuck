@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { CodexAccountView } from '../types/codex';
 import type { AppError } from '../types/system';
 import {
+  deleteCodexAccount,
   getCurrentCodexAccount,
   listCodexAccounts,
   refreshAllCodexQuotas,
@@ -17,12 +18,14 @@ interface CodexAccountsState {
   refreshingAll: boolean;
   refreshingAccountIds: string[];
   switchingAccountId: string | null;
+  deletingAccountId: string | null;
   error: AppError | null;
   loadAccounts: () => Promise<void>;
   selectAccount: (accountId: string) => void;
   refreshAccountQuota: (accountId: string) => Promise<void>;
   refreshAllQuotas: () => Promise<void>;
   switchToAccount: (accountId: string) => Promise<void>;
+  deleteAccount: (accountId: string) => Promise<void>;
   upsertAccounts: (accounts: CodexAccountView[]) => void;
 }
 
@@ -47,6 +50,7 @@ export const useCodexAccountsStore = create<CodexAccountsState>((set, get) => ({
   refreshingAll: false,
   refreshingAccountIds: [],
   switchingAccountId: null,
+  deletingAccountId: null,
   error: null,
   async loadAccounts() {
     set({ loading: true, error: null });
@@ -142,6 +146,28 @@ export const useCodexAccountsStore = create<CodexAccountsState>((set, get) => ({
       });
     } catch (error) {
       set({ error: error as AppError, switchingAccountId: null });
+    }
+  },
+  async deleteAccount(accountId) {
+    set({ deletingAccountId: accountId, error: null });
+    try {
+      await deleteCodexAccount(accountId);
+      set((state) => {
+        const accounts = state.accounts.filter((account) => account.id !== accountId);
+        const nextSelected =
+          state.selectedAccountId === accountId
+            ? getCurrentId(accounts) ?? accounts[0]?.id ?? null
+            : state.selectedAccountId;
+        return {
+          accounts,
+          currentAccountId:
+            state.currentAccountId === accountId ? getCurrentId(accounts) : state.currentAccountId,
+          selectedAccountId: nextSelected,
+          deletingAccountId: null,
+        };
+      });
+    } catch (error) {
+      set({ error: error as AppError, deletingAccountId: null });
     }
   },
   upsertAccounts(nextAccounts) {
