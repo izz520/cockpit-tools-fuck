@@ -108,6 +108,119 @@
   color: var(--color-primary-active);
 }
 
+.api-account-card .account-card-main {
+  gap: 12px;
+}
+
+.api-account-fields {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: linear-gradient(180deg, oklch(0.992 0.006 235 / 0.84), oklch(1 0 0 / 0.76));
+}
+
+.api-account-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.api-account-field:last-child {
+  border-bottom: 0;
+}
+
+.api-account-field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.api-account-field-label svg {
+  flex: 0 0 auto;
+  padding: 3px;
+  border-radius: 7px;
+  background: var(--color-blue-soft);
+  color: var(--color-blue);
+}
+
+.api-account-field-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.api-account-field-actions button {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: oklch(1 0 0 / 0.72);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.api-account-field-actions button:hover:not(:disabled) {
+  color: var(--color-primary-active);
+  background: white;
+}
+
+.api-account-field-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+
+.api-account-field code {
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-strong);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 760;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.api-oauth-binding {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: var(--radius-control);
+  background: linear-gradient(90deg, var(--color-success-soft), oklch(0.968 0.02 235));
+  color: var(--color-success);
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.api-oauth-binding span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.api-oauth-binding > span:last-child {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-weight: 720;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .quota-lines {
   display: grid;
   gap: 8px;

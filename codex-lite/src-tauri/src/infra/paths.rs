@@ -60,3 +60,7 @@ pub fn default_codex_home() -> AppResult<PathBuf> {
 pub fn default_codex_auth_file() -> AppResult<PathBuf> {
     Ok(default_codex_home()?.join("auth.json"))
 }
+
+pub fn default_codex_config_file() -> AppResult<PathBuf> {
+    Ok(default_codex_home()?.join("config.toml"))
+}

@@ -202,6 +202,15 @@
   font-weight: 650;
 }
 
+@media (min-width: 1680px) {
+  .account-card-grid {
+    --account-card-max: 420px;
+
+    grid-template-columns: repeat(auto-fill, minmax(var(--account-card-min), var(--account-card-max)));
+    justify-content: start;
+  }
+}
+
 .empty-state {
   grid-column: 1 / -1;
   display: grid;

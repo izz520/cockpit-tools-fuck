@@ -400,7 +400,10 @@ mod tests {
 
         // OAuth auth files omit auth_mode and carry OPENAI_API_KEY as null.
         assert!(json.get("auth_mode").is_none());
-        assert!(json.get("OPENAI_API_KEY").map(|v| v.is_null()).unwrap_or(false));
+        assert!(json
+            .get("OPENAI_API_KEY")
+            .map(|v| v.is_null())
+            .unwrap_or(false));
         // account_id must be present inside tokens for Codex to accept the file.
         assert!(tokens.get("account_id").is_some());
     }

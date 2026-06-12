@@ -8,7 +8,11 @@ use serde::{Deserialize, Serialize};
 pub struct CodexAuthFile {
     #[serde(default, alias = "authMode", skip_serializing_if = "Option::is_none")]
     pub auth_mode: Option<String>,
-    #[serde(rename = "OPENAI_API_KEY", default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "OPENAI_API_KEY",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub openai_api_key: Option<serde_json::Value>,
     #[serde(
         default,
@@ -20,7 +24,11 @@ pub struct CodexAuthFile {
     pub base_url: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tokens: Option<CodexAuthTokens>,
-    #[serde(default, alias = "lastRefresh", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        alias = "lastRefresh",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub last_refresh: Option<serde_json::Value>,
 }
 
@@ -30,7 +38,11 @@ pub struct CodexAuthTokens {
     pub id_token: String,
     #[serde(alias = "accessToken")]
     pub access_token: String,
-    #[serde(default, alias = "refreshToken", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        alias = "refreshToken",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub refresh_token: Option<String>,
     #[serde(default, alias = "accountId", skip_serializing_if = "Option::is_none")]
     pub account_id: Option<String>,

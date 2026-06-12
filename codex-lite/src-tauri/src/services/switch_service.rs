@@ -4,7 +4,7 @@ use std::path::Path;
 use crate::infra::{atomic_write, codex_keychain, paths};
 use crate::models::account::SwitchResult;
 use crate::models::error::{AppError, AppResult};
-use crate::services::{account_service, auth_file_service};
+use crate::services::{account_service, auth_file_service, codex_config_service};
 
 pub fn switch_account(account_id: String) -> AppResult<SwitchResult> {
     switch_account_with_writer(account_id, atomic_write::write_atomic)
@@ -56,13 +56,27 @@ fn switch_account_with_writer(
         return Err(write_error);
     }
 
+    if let Err(config_error) =
+        codex_config_service::apply_account_config(&account, &paths::default_codex_config_file()?)
+    {
+        if let Some(path) = backup_path.as_ref() {
+            let _ = fs::copy(path, &auth_path);
+        }
+        return Err(config_error);
+    }
+
     // On macOS, Codex reads OAuth credentials from the login keychain too. Update
     // it so the switch fully takes effect. Failure here is non-fatal: auth.json is
     // already written, so we log and continue rather than abort the switch.
-    if matches!(account.auth_mode, crate::models::account::CodexAuthMode::OAuth) {
+    if matches!(
+        account.auth_mode,
+        crate::models::account::CodexAuthMode::OAuth
+    ) {
         if let Some(codex_home) = auth_path.parent() {
             if let Ok(auth_json) = std::str::from_utf8(&content) {
-                if let Err(keychain_error) = codex_keychain::write_codex_keychain(codex_home, auth_json) {
+                if let Err(keychain_error) =
+                    codex_keychain::write_codex_keychain(codex_home, auth_json)
+                {
                     tracing::warn!(
                         code = keychain_error.code,
                         message = keychain_error.message,
