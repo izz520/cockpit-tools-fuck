@@ -5,16 +5,32 @@ use crate::infra::{atomic_write, codex_keychain, paths};
 use crate::models::account::SwitchResult;
 use crate::models::error::{AppError, AppResult};
 use crate::services::{
-    account_service, auth_file_service, codex_config_service, codex_session_visibility_service,
+    account_service, auth_file_service, codex_app_service, codex_config_service,
+    codex_session_visibility_service,
 };
 
 pub fn switch_account(account_id: String) -> AppResult<SwitchResult> {
-    switch_account_with_writer(account_id, atomic_write::write_atomic)
+    switch_account_with_writer_and_codex_control(
+        account_id,
+        atomic_write::write_atomic,
+        codex_app_service::quit_codex_for_switch,
+        codex_app_service::open_codex_after_switch,
+    )
 }
 
+#[cfg(test)]
 fn switch_account_with_writer(
     account_id: String,
     write_auth: impl Fn(&Path, &[u8]) -> AppResult<()>,
+) -> AppResult<SwitchResult> {
+    switch_account_with_writer_and_codex_control(account_id, write_auth, || Ok(()), || Ok(()))
+}
+
+fn switch_account_with_writer_and_codex_control(
+    account_id: String,
+    write_auth: impl Fn(&Path, &[u8]) -> AppResult<()>,
+    quit_codex: impl Fn() -> AppResult<()>,
+    open_codex: impl Fn() -> AppResult<()>,
 ) -> AppResult<SwitchResult> {
     let account = account_service::get_account(&account_id)?;
     let auth_file = auth_file_service::auth_file_from_account(&account)?;
@@ -50,6 +66,8 @@ fn switch_account_with_writer(
             "Re-import this account.",
         )
     })?;
+
+    quit_codex()?;
 
     if let Err(write_error) = write_auth(&auth_path, &content) {
         if let Some(path) = backup_path.as_ref() {
@@ -92,6 +110,7 @@ fn switch_account_with_writer(
     }
 
     let view = account_service::mark_current(&account_id)?;
+    open_codex()?;
     Ok(SwitchResult {
         account: view,
         backup_path: backup_path.map(|path| path.display().to_string()),
@@ -102,7 +121,7 @@ fn switch_account_with_writer(
 #[cfg(test)]
 mod tests {
     use super::{switch_account, switch_account_with_writer};
-    use crate::infra::{paths, storage};
+    use crate::infra::{atomic_write, paths, storage};
     use crate::models::account::{AccountsFile, CodexAuthMode};
     use crate::models::error::AppError;
     use crate::services::auth_file_service;
@@ -134,7 +153,8 @@ mod tests {
         std::fs::write(&auth_path, TestEnv::fixture_content("api-key.json"))
             .expect("existing auth should be written");
 
-        let result = switch_account(account_id.clone()).expect("switch should succeed");
+        let result = switch_account_with_writer(account_id.clone(), atomic_write::write_atomic)
+            .expect("switch should succeed");
         let written_auth =
             auth_file_service::read_auth_file(&auth_path).expect("written auth should parse");
         let stored = storage::load_accounts_file().expect("accounts should load");
@@ -203,7 +223,8 @@ mod tests {
         let account_id = account.id.clone();
         save_single_account(account);
 
-        switch_account(account_id).expect("API key switch should succeed");
+        switch_account_with_writer(account_id, atomic_write::write_atomic)
+            .expect("API key switch should succeed");
         let written_auth =
             auth_file_service::read_auth_file(&paths::default_codex_auth_file().unwrap())
                 .expect("written API key auth should parse");
