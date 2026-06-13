@@ -23,6 +23,7 @@ export interface CodexAccountView {
   accountId?: string | null;
   userId?: string | null;
   planType?: string | null;
+  apiKey?: string | null;
   apiBaseUrl?: string | null;
   quota?: CodexQuotaView | null;
   quotaError?: AppError | null;

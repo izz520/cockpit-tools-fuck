@@ -224,16 +224,12 @@
   width: auto;
 }
 
-.session-col-provider {
-  width: 188px;
-}
-
 .session-col-status {
   width: 128px;
 }
 
 .session-col-time {
-  width: 98px;
+  width: 126px;
 }
 
 .sessions-table th,
@@ -303,7 +299,6 @@
   white-space: nowrap;
 }
 
-.provider-pill,
 .session-status,
 .session-archive {
   display: inline-flex;
@@ -316,18 +311,6 @@
   font-size: 12px;
   font-weight: 780;
   white-space: nowrap;
-}
-
-.provider-pill {
-  background: var(--color-primary-soft);
-  color: var(--color-primary-active);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.provider-pill.active {
-  background: var(--color-success-soft);
-  color: var(--color-success);
 }
 
 .session-status.visible {
@@ -357,6 +340,7 @@
   font-variant-numeric: tabular-nums;
   font-weight: 680;
   line-height: 18px;
+  white-space: nowrap;
 }
 
 @media (min-width: 1500px) {
@@ -364,16 +348,12 @@
     min-width: 0;
   }
 
-  .session-col-provider {
-    width: 210px;
-  }
-
   .session-col-status {
     width: 132px;
   }
 
   .session-col-time {
-    width: 108px;
+    width: 132px;
   }
 }
 

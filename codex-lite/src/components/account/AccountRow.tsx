@@ -1,4 +1,5 @@
-import { CalendarDays, Clock3, Copy, Eye, KeyRound, Link, Play, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
+import { CalendarDays, Check, Clock3, Copy, Eye, KeyRound, Link, Pencil, Play, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { isOAuthAuthMode, type CodexAccountView } from '../../types/codex';
 import type { AppError } from '../../types/system';
 import { Button } from '../ui/Button';
@@ -13,6 +14,7 @@ interface AccountRowProps {
   onRefreshQuota: (accountId: string) => void;
   onSwitch: (accountId: string) => void;
   onDelete: (accountId: string) => void;
+  onEditApiAccount: (account: CodexAccountView) => void;
   onReauthenticate: (accountId: string) => void;
 }
 
@@ -86,6 +88,10 @@ function getMaskedApiKey(): string {
   return 'sk-********************';
 }
 
+function getCopyableApiKey(account: CodexAccountView): string {
+  return account.apiKey ?? '';
+}
+
 function getApiBaseUrl(account: CodexAccountView): string {
   return account.apiBaseUrl ?? 'https://api.openai.com/v1';
 }
@@ -105,8 +111,10 @@ export function AccountRow({
   onRefreshQuota,
   onSwitch,
   onDelete,
+  onEditApiAccount,
   onReauthenticate,
 }: AccountRowProps) {
+  const [copiedField, setCopiedField] = useState<'apiKey' | 'apiBaseUrl' | null>(null);
   const quotaUnsupported = account.authMode === 'api_key';
   const planText = quotaUnsupported ? 'API' : account.planType ?? 'Free';
   const hourly = account.quota?.hourlyRemainingPercent;
@@ -117,6 +125,15 @@ export function AccountRow({
   const canReauthenticate = canReauthenticateAccount(account);
   const hasQuotaError = account.quotaError !== null && account.quotaError !== undefined;
   const quotaErrorSummary = account.quotaError ? getQuotaErrorSummary(account.quotaError) : null;
+
+  async function copyField(field: 'apiKey' | 'apiBaseUrl', value: string) {
+    if (!value) {
+      return;
+    }
+    await navigator.clipboard.writeText(value);
+    setCopiedField(field);
+    window.setTimeout(() => setCopiedField(null), 1300);
+  }
 
   return (
     <article className={`account-card account-row ${quotaUnsupported ? 'api-account-card' : ''} ${account.isCurrent ? 'current' : ''}`}>
@@ -139,8 +156,15 @@ export function AccountRow({
                   <button type="button" aria-label="Show API key" disabled>
                     <Eye size={13} />
                   </button>
-                  <button type="button" aria-label="Copy API key" disabled>
-                    <Copy size={13} />
+                  <button
+                    type="button"
+                    aria-label={copiedField === 'apiKey' ? 'API key copied' : 'Copy API key'}
+                    className={copiedField === 'apiKey' ? 'copied' : ''}
+                    title={copiedField === 'apiKey' ? '复制成功' : '复制 API Key'}
+                    disabled={!account.apiKey}
+                    onClick={() => void copyField('apiKey', getCopyableApiKey(account))}
+                  >
+                    {copiedField === 'apiKey' ? <Check size={13} /> : <Copy size={13} />}
                   </button>
                 </span>
                 <code>{getMaskedApiKey()}</code>
@@ -153,10 +177,12 @@ export function AccountRow({
                 <span className="api-account-field-actions">
                   <button
                     type="button"
-                    aria-label="Copy API base URL"
-                    onClick={() => void navigator.clipboard?.writeText(getApiBaseUrl(account))}
+                    aria-label={copiedField === 'apiBaseUrl' ? 'API base URL copied' : 'Copy API base URL'}
+                    className={copiedField === 'apiBaseUrl' ? 'copied' : ''}
+                    title={copiedField === 'apiBaseUrl' ? '复制成功' : '复制基础地址'}
+                    onClick={() => void copyField('apiBaseUrl', getApiBaseUrl(account))}
                   >
-                    <Copy size={13} />
+                    {copiedField === 'apiBaseUrl' ? <Check size={13} /> : <Copy size={13} />}
                   </button>
                 </span>
                 <code>{getApiBaseUrl(account)}</code>
@@ -235,6 +261,9 @@ export function AccountRow({
             disabled={refreshing}
             onClick={() => onRefreshQuota(account.id)}
           />
+        ) : null}
+        {quotaUnsupported ? (
+          <IconButton label="Edit API account" icon={<Pencil size={18} />} onClick={() => onEditApiAccount(account)} />
         ) : null}
         <IconButton
           label="Delete account"

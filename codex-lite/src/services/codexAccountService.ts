@@ -24,3 +24,12 @@ export function refreshAllCodexQuotas(): Promise<CodexAccountView[]> {
 export function deleteCodexAccount(accountId: string): Promise<void> {
   return invokeCommand('delete_codex_account', { accountId });
 }
+
+export function updateCodexApiKeyAccount(
+  accountId: string,
+  apiKey: string,
+  apiBaseUrl: string | null,
+  displayName: string | null,
+): Promise<CodexAccountView> {
+  return invokeCommand('update_codex_api_key_account', { accountId, apiKey, apiBaseUrl, displayName });
+}

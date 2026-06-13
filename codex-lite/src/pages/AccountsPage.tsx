@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Crown, KeyRound, RefreshCw, Search, Settings, UserCheck, UserPlus, Users } from 'lucide-react';
+import { Crown, History, KeyRound, RefreshCw, Search, Settings, UserPlus, Users } from 'lucide-react';
 import { AccountRow } from '../components/account/AccountRow';
 import { ConfirmSwitchModal } from '../components/account/ConfirmSwitchModal';
 import { ConfirmDeleteModal } from '../components/account/ConfirmDeleteModal';
+import { EditApiAccountModal } from '../components/account/EditApiAccountModal';
 import { ImportDrawer } from '../components/import/ImportDrawer';
 import { Button } from '../components/ui/Button';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { useCodexAccountsStore } from '../stores/useCodexAccountsStore';
+import { useCodexSessionsStore } from '../stores/useCodexSessionsStore';
 import { useImportFlowStore } from '../stores/useImportFlowStore';
 import { isOAuthAuthMode, type CodexAccountView } from '../types/codex';
 import './AccountsPage.css';
@@ -32,21 +34,27 @@ export function AccountsPage({ onOpenSessions }: AccountsPageProps) {
     refreshingAccountIds,
     switchingAccountId,
     deletingAccountId,
+    updatingAccountId,
     loadAccounts,
     refreshAccountQuota,
     refreshAllQuotas,
     switchToAccount,
     deleteAccount,
+    updateApiKeyAccount,
   } = useCodexAccountsStore();
+  const sessions = useCodexSessionsStore((state) => state.sessions);
+  const loadSessions = useCodexSessionsStore((state) => state.loadSessions);
   const openImportDrawer = useImportFlowStore((state) => state.openDrawer);
   const openOAuthLogin = useImportFlowStore((state) => state.openOAuthLogin);
   const [pendingSwitchAccountId, setPendingSwitchAccountId] = useState<string | null>(null);
   const [pendingDeleteAccountId, setPendingDeleteAccountId] = useState<string | null>(null);
+  const [editingApiAccountId, setEditingApiAccountId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     void loadAccounts();
-  }, [loadAccounts]);
+    void loadSessions();
+  }, [loadAccounts, loadSessions]);
 
   const oauthAccountCount = useMemo(
     () => accounts.filter((account) => isOAuthAuthMode(account.authMode)).length,
@@ -54,10 +62,6 @@ export function AccountsPage({ onOpenSessions }: AccountsPageProps) {
   );
   const apiAccountCount = useMemo(
     () => accounts.filter((account) => account.authMode === 'api_key').length,
-    [accounts],
-  );
-  const currentAccountCount = useMemo(
-    () => accounts.filter((account) => account.isCurrent).length,
     [accounts],
   );
   const filteredAccounts = useMemo(() => {
@@ -75,6 +79,10 @@ export function AccountsPage({ onOpenSessions }: AccountsPageProps) {
     () => accounts.find((account) => account.id === pendingDeleteAccountId) ?? null,
     [accounts, pendingDeleteAccountId],
   );
+  const editingApiAccount = useMemo(
+    () => accounts.find((account) => account.id === editingApiAccountId) ?? null,
+    [accounts, editingApiAccountId],
+  );
 
   async function confirmSwitch(accountId: string) {
     await switchToAccount(accountId);
@@ -84,6 +92,11 @@ export function AccountsPage({ onOpenSessions }: AccountsPageProps) {
   async function confirmDelete(accountId: string) {
     await deleteAccount(accountId);
     setPendingDeleteAccountId(null);
+  }
+
+  async function saveApiAccount(accountId: string, apiKey: string, apiBaseUrl: string | null, displayName: string | null) {
+    await updateApiKeyAccount(accountId, apiKey, apiBaseUrl, displayName);
+    setEditingApiAccountId(null);
   }
 
   return (
@@ -124,11 +137,11 @@ export function AccountsPage({ onOpenSessions }: AccountsPageProps) {
             </article>
             <article className="stat-card">
               <span className="stat-icon stat-icon-purple">
-                <UserCheck size={24} />
+                <History size={24} />
               </span>
-              <span className="stat-label">当前账号</span>
-              <strong>{currentAccountCount}</strong>
-              <span className="stat-meta">已启用</span>
+              <span className="stat-label">会话数</span>
+              <strong>{sessions.length}</strong>
+              <span className="stat-meta">条会话</span>
             </article>
           </div>
 
@@ -191,6 +204,7 @@ export function AccountsPage({ onOpenSessions }: AccountsPageProps) {
                 onRefreshQuota={(accountId) => void refreshAccountQuota(accountId)}
                 onSwitch={setPendingSwitchAccountId}
                 onDelete={setPendingDeleteAccountId}
+                onEditApiAccount={(nextAccount) => setEditingApiAccountId(nextAccount.id)}
                 onReauthenticate={() => void openOAuthLogin()}
               />
             ))}
@@ -210,6 +224,14 @@ export function AccountsPage({ onOpenSessions }: AccountsPageProps) {
         deleting={deletingAccountId === pendingDeleteAccountId}
         onCancel={() => setPendingDeleteAccountId(null)}
         onConfirm={(accountId) => void confirmDelete(accountId)}
+      />
+      <EditApiAccountModal
+        account={editingApiAccount}
+        saving={updatingAccountId === editingApiAccountId}
+        onCancel={() => setEditingApiAccountId(null)}
+        onSave={(accountId, apiKey, apiBaseUrl, displayName) =>
+          void saveApiAccount(accountId, apiKey, apiBaseUrl, displayName)
+        }
       />
     </>
   );

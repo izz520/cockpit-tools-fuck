@@ -1,4 +1,4 @@
-import { Bot, FileText, History, MessageCircle, Settings, Sparkles, Users, Wand2 } from 'lucide-react';
+import { Bot, FileText, MessageCircle, Settings, Sparkles, Users, Wand2 } from 'lucide-react';
 import { type PointerEvent, type ReactNode } from 'react';
 import { startWindowDragging } from '../../services/windowService';
 
@@ -30,7 +30,7 @@ export function AppShell({ page, setPage, children }: AppShellProps) {
         <div className="nav-section">
           <span className="nav-section-label">平台</span>
           <button
-            className={`nav-button ${page === 'accounts' ? 'active' : ''}`}
+            className={`nav-button ${page === 'accounts' || page === 'sessions' ? 'active' : ''}`}
             aria-label="Codex"
             title="Accounts"
             onClick={() => setPage('accounts')}
@@ -61,17 +61,6 @@ export function AppShell({ page, setPage, children }: AppShellProps) {
               <Wand2 size={19} />
             </span>
             <span>Tools</span>
-          </button>
-          <button
-            className={`nav-button ${page === 'sessions' ? 'active' : ''}`}
-            aria-label="Sessions"
-            title="Sessions"
-            onClick={() => setPage('sessions')}
-          >
-            <span className="nav-icon">
-              <History size={19} />
-            </span>
-            <span>会话</span>
           </button>
         </div>
 
@@ -105,7 +94,11 @@ export function AppShell({ page, setPage, children }: AppShellProps) {
           <div className="topbar-title-group">
             <MessageCircle size={18} aria-hidden="true" />
             <h1 className="page-title">
-              {page === 'accounts' ? 'AI Accounts' : page === 'sessions' ? 'Sessions' : page === 'settings' ? 'Settings' : 'Logs'}
+              {page === 'accounts' || page === 'sessions'
+                ? 'AI Accounts'
+                : page === 'settings'
+                  ? 'Settings'
+                  : 'Logs'}
             </h1>
           </div>
         </header>

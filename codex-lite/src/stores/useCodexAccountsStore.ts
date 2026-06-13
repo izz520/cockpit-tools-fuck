@@ -8,6 +8,7 @@ import {
   refreshAllCodexQuotas,
   refreshCodexQuota,
   switchCodexAccount,
+  updateCodexApiKeyAccount,
 } from '../services/codexAccountService';
 
 interface CodexAccountsState {
@@ -19,6 +20,7 @@ interface CodexAccountsState {
   refreshingAccountIds: string[];
   switchingAccountId: string | null;
   deletingAccountId: string | null;
+  updatingAccountId: string | null;
   error: AppError | null;
   loadAccounts: () => Promise<void>;
   selectAccount: (accountId: string) => void;
@@ -26,6 +28,12 @@ interface CodexAccountsState {
   refreshAllQuotas: () => Promise<void>;
   switchToAccount: (accountId: string) => Promise<void>;
   deleteAccount: (accountId: string) => Promise<void>;
+  updateApiKeyAccount: (
+    accountId: string,
+    apiKey: string,
+    apiBaseUrl: string | null,
+    displayName: string | null,
+  ) => Promise<void>;
   upsertAccounts: (accounts: CodexAccountView[]) => void;
 }
 
@@ -51,6 +59,7 @@ export const useCodexAccountsStore = create<CodexAccountsState>((set, get) => ({
   refreshingAccountIds: [],
   switchingAccountId: null,
   deletingAccountId: null,
+  updatingAccountId: null,
   error: null,
   async loadAccounts() {
     set({ loading: true, error: null });
@@ -168,6 +177,21 @@ export const useCodexAccountsStore = create<CodexAccountsState>((set, get) => ({
       });
     } catch (error) {
       set({ error: error as AppError, deletingAccountId: null });
+    }
+  },
+  async updateApiKeyAccount(accountId, apiKey, apiBaseUrl, displayName) {
+    set({ updatingAccountId: accountId, error: null });
+    try {
+      const updated = await updateCodexApiKeyAccount(accountId, apiKey, apiBaseUrl, displayName);
+      set((state) => ({
+        accounts: mergeAccount(state.accounts, updated),
+        currentAccountId: updated.isCurrent ? updated.id : state.currentAccountId,
+        selectedAccountId: updated.id,
+        updatingAccountId: null,
+      }));
+    } catch (error) {
+      set({ error: error as AppError, updatingAccountId: null });
+      throw error;
     }
   },
   upsertAccounts(nextAccounts) {

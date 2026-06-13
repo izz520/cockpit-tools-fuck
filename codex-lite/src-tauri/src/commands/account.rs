@@ -18,6 +18,16 @@ pub fn delete_codex_account(account_id: String) -> AppResult<()> {
 }
 
 #[tauri::command]
+pub fn update_codex_api_key_account(
+    account_id: String,
+    api_key: String,
+    api_base_url: Option<String>,
+    display_name: Option<String>,
+) -> AppResult<CodexAccountView> {
+    account_service::update_api_key_account(&account_id, api_key, api_base_url, display_name)
+}
+
+#[tauri::command]
 pub fn switch_codex_account(account_id: String) -> AppResult<SwitchResult> {
     switch_service::switch_account(account_id)
 }

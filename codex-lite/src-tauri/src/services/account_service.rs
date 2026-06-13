@@ -1,7 +1,7 @@
-use crate::infra::{paths, storage};
-use crate::models::account::{CodexAccount, CodexAccountView};
+use crate::infra::{atomic_write, paths, storage};
+use crate::models::account::{CodexAccount, CodexAccountView, CodexAuthMode};
 use crate::models::error::{AppError, AppResult};
-use crate::services::auth_file_service;
+use crate::services::{auth_file_service, codex_config_service};
 
 fn now_timestamp() -> i64 {
     chrono::Utc::now().timestamp()
@@ -55,6 +55,80 @@ pub fn delete_account(account_id: &str) -> AppResult<()> {
         file.current_account_id = None;
     }
     storage::save_accounts_file(file)
+}
+
+fn normalize_optional_text(value: Option<String>) -> Option<String> {
+    value
+        .map(|item| item.trim().to_string())
+        .filter(|item| !item.is_empty())
+}
+
+fn sync_active_api_account(account: &CodexAccount) -> AppResult<()> {
+    let auth_file = auth_file_service::auth_file_from_account(account)?;
+    let auth_content = serde_json::to_vec_pretty(&auth_file).map_err(|err| {
+        AppError::new(
+            "CODEX_AUTH_SERIALIZE_FAILED",
+            format!("Failed to serialize updated API account auth file: {}", err),
+            "Check the API account fields and try again.",
+        )
+    })?;
+    let auth_path = paths::default_codex_auth_file()?;
+    atomic_write::write_atomic(&auth_path, &auth_content)?;
+    let config_path = paths::default_codex_config_file()?;
+    codex_config_service::apply_account_config(account, &config_path)
+}
+
+pub fn update_api_key_account(
+    account_id: &str,
+    api_key: String,
+    api_base_url: Option<String>,
+    display_name: Option<String>,
+) -> AppResult<CodexAccountView> {
+    let trimmed_api_key = api_key.trim();
+    if trimmed_api_key.is_empty() {
+        return Err(AppError::new(
+            "CODEX_API_KEY_EMPTY",
+            "API key cannot be empty.",
+            "Paste a valid API key.",
+        ));
+    }
+
+    let mut file = storage::load_accounts_file()?;
+    let is_current = file.current_account_id.as_deref() == Some(account_id);
+    let account = file
+        .accounts
+        .iter_mut()
+        .find(|item| item.id == account_id)
+        .ok_or_else(|| {
+            AppError::new(
+                "CODEX_ACCOUNT_NOT_FOUND",
+                "Codex account was not found.",
+                "Refresh accounts or import it again.",
+            )
+        })?;
+
+    if account.auth_mode != CodexAuthMode::ApiKey {
+        return Err(AppError::new(
+            "CODEX_ACCOUNT_NOT_API_KEY",
+            "Only API Key accounts can be edited here.",
+            "Choose an API Key account and try again.",
+        ));
+    }
+
+    account.api_key = Some(trimmed_api_key.to_string());
+    account.api_base_url = normalize_optional_text(api_base_url);
+    if let Some(next_display_name) = normalize_optional_text(display_name) {
+        account.display_name = next_display_name;
+    }
+    account.updated_at = now_timestamp();
+    let updated = account.clone();
+    storage::save_accounts_file(file)?;
+
+    if is_current {
+        sync_active_api_account(&updated)?;
+    }
+
+    Ok(updated.to_view(is_current))
 }
 
 pub fn get_current_account() -> AppResult<Option<CodexAccountView>> {

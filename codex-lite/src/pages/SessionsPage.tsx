@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Archive, CheckCircle2, CheckSquare, ChevronDown, ChevronRight, EyeOff, Folder, RefreshCw, RotateCcw, Search, Trash2 } from 'lucide-react';
+import { Archive, ArrowLeft, CheckCircle2, CheckSquare, ChevronDown, ChevronRight, EyeOff, Folder, RefreshCw, RotateCcw, Search, Trash2 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { useCodexSessionsStore } from '../stores/useCodexSessionsStore';
@@ -10,12 +10,12 @@ function formatTime(value?: number | null): string {
   if (!value) {
     return '-';
   }
-  return new Intl.DateTimeFormat('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
+  const date = new Date(value);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hour = String(date.getHours()).padStart(2, '0');
+  const minute = String(date.getMinutes()).padStart(2, '0');
+  return `${month}/${day} ${hour}:${minute}`;
 }
 
 function matchesQuery(session: CodexSessionView, query: string): boolean {
@@ -41,7 +41,11 @@ interface SessionGroup {
   sessions: CodexSessionView[];
 }
 
-export function SessionsPage() {
+interface SessionsPageProps {
+  onBack: () => void;
+}
+
+export function SessionsPage({ onBack }: SessionsPageProps) {
   const { sessions, loading, restoring, deleting, error, loadSessions, restoreSessions, deleteSessions } =
     useCodexSessionsStore();
   const [searchQuery, setSearchQuery] = useState('');
@@ -84,6 +88,7 @@ export function SessionsPage() {
     }
     return Array.from(grouped.values()).sort((left, right) => left.project.localeCompare(right.project));
   }, [filteredSessions]);
+  const allGroupsExpanded = groups.length > 0 && groups.every((group) => !collapsedGroupSet.has(group.key));
 
   function toggleSession(sessionId: string) {
     setSelectedIds((current) =>
@@ -104,6 +109,16 @@ export function SessionsPage() {
     setCollapsedGroupKeys((current) =>
       current.includes(groupKey) ? current.filter((key) => key !== groupKey) : [...current, groupKey],
     );
+  }
+
+  function toggleAllGroups() {
+    const groupKeys = groups.map((group) => group.key);
+    if (allGroupsExpanded) {
+      setCollapsedGroupKeys((current) => Array.from(new Set([...current, ...groupKeys])));
+      return;
+    }
+    const visibleGroupKeys = new Set(groupKeys);
+    setCollapsedGroupKeys((current) => current.filter((key) => !visibleGroupKeys.has(key)));
   }
 
   function toggleGroupSelection(group: SessionGroup) {
@@ -139,6 +154,9 @@ export function SessionsPage() {
             <h2 className="sessions-title">会话管理</h2>
             <p>查看本机 Codex 历史会话，恢复当前账号可见性，或删除不再需要的记录。</p>
           </div>
+          <Button variant="secondary" icon={<ArrowLeft size={16} />} onClick={onBack}>
+            返回账号管理
+          </Button>
         </div>
 
         <div className="sessions-stats" aria-label="Session statistics">
@@ -173,6 +191,14 @@ export function SessionsPage() {
           <div className="sessions-actions">
             <Button variant="secondary" icon={<RefreshCw size={16} />} loading={loading} onClick={() => void loadSessions()}>
               刷新
+            </Button>
+            <Button
+              variant="secondary"
+              icon={allGroupsExpanded ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+              disabled={groups.length === 0}
+              onClick={toggleAllGroups}
+            >
+              {allGroupsExpanded ? '一键收起' : '一键展开'}
             </Button>
             <Button
               variant="secondary"
@@ -236,7 +262,6 @@ export function SessionsPage() {
                       <colgroup>
                         <col className="session-col-select" />
                         <col className="session-col-main" />
-                        <col className="session-col-provider" />
                         <col className="session-col-status" />
                         <col className="session-col-time" />
                       </colgroup>
@@ -251,7 +276,6 @@ export function SessionsPage() {
                             />
                           </th>
                           <th>会话</th>
-                          <th>Provider</th>
                           <th>状态</th>
                           <th>更新时间</th>
                         </tr>
@@ -272,13 +296,6 @@ export function SessionsPage() {
                                 <strong>{session.title}</strong>
                                 <span>{session.preview || session.id}</span>
                               </div>
-                            </td>
-                            <td>
-                              <span
-                                className={session.provider === session.targetProvider ? 'provider-pill active' : 'provider-pill'}
-                              >
-                                {session.provider || 'unknown'}
-                              </span>
                             </td>
                             <td>
                               <div className="session-status-stack">
