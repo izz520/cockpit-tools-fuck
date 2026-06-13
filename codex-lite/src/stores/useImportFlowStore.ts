@@ -127,8 +127,12 @@ function validateJsonText(jsonText: string): AppError | null {
 
   try {
     const parsed = JSON.parse(trimmed) as unknown;
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-      return appError('IMPORT_JSON_OBJECT_REQUIRED', 'JSON content must be an object.', 'Paste the full auth.json object.');
+    if (typeof parsed !== 'object' || parsed === null) {
+      return appError(
+        'IMPORT_JSON_VALUE_REQUIRED',
+        'JSON content must be an object or array.',
+        'Paste a Codex auth JSON object, CPA export, sub2api export, or an array of exported accounts.',
+      );
     }
   } catch (error) {
     return appError(
@@ -189,6 +193,17 @@ function shouldCloseAfterSuccessfulImport(result: ImportResult): boolean {
   return result.imported.length > 0 && result.failed.length === 0;
 }
 
+function emptyImportDraft() {
+  return {
+    jsonText: '',
+    filePaths: [],
+    batchPreview: null,
+    batchSelectedItemIds: [],
+    tokenFields: emptyTokenFields,
+    apiKeyFields: emptyApiKeyFields,
+  };
+}
+
 export const useImportFlowStore = create<ImportFlowState>((set) => ({
   open: false,
   source: 'local',
@@ -211,8 +226,7 @@ export const useImportFlowStore = create<ImportFlowState>((set) => ({
       error: null,
       resultAccounts: [],
       failedImports: [],
-      batchPreview: null,
-      batchSelectedItemIds: [],
+      ...emptyImportDraft(),
     });
   },
   async openOAuthLogin() {
@@ -229,8 +243,7 @@ export const useImportFlowStore = create<ImportFlowState>((set) => ({
       error: null,
       resultAccounts: [],
       failedImports: [],
-      batchPreview: null,
-      batchSelectedItemIds: [],
+      ...emptyImportDraft(),
       oauth: emptyOAuthFlow,
     });
     await useImportFlowStore.getState().startOAuthLogin();
@@ -246,8 +259,7 @@ export const useImportFlowStore = create<ImportFlowState>((set) => ({
       previewingBatch: false,
       error: null,
       oauth: emptyOAuthFlow,
-      batchPreview: null,
-      batchSelectedItemIds: [],
+      ...emptyImportDraft(),
     });
   },
   setSource(source) {
@@ -262,6 +274,7 @@ export const useImportFlowStore = create<ImportFlowState>((set) => ({
       failedImports: [],
       batchPreview: null,
       batchSelectedItemIds: [],
+      filePaths: source === 'jsonFile' || source === 'batchFiles' ? useImportFlowStore.getState().filePaths : [],
       oauth: source === 'oauth' ? oauth : emptyOAuthFlow,
     });
   },
@@ -553,14 +566,14 @@ export const useImportFlowStore = create<ImportFlowState>((set) => ({
         throw appError('IMPORT_SOURCE_UNSUPPORTED', 'Import source is not supported.', 'Choose another import source.');
       }
 
+      const shouldClose = shouldCloseAfterSuccessfulImport(result);
       set((current) => ({
-        open: shouldCloseAfterSuccessfulImport(result) ? false : current.open,
+        open: shouldClose ? false : current.open,
         importing: false,
         oauth: current.source === 'oauth' ? { ...current.oauth, step: 'completed' } : current.oauth,
         resultAccounts: result.imported,
         failedImports: result.failed,
-        batchPreview: null,
-        batchSelectedItemIds: [],
+        ...(shouldClose ? emptyImportDraft() : { batchPreview: null, batchSelectedItemIds: [] }),
       }));
       return result;
     } catch (error) {

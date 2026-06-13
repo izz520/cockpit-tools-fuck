@@ -67,8 +67,26 @@ function jsonTextPreview(jsonText: string): string {
   }
 
   try {
-    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
-    const keys = Object.keys(parsed).slice(0, 5);
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (Array.isArray(parsed)) {
+      return `${parsed.length} account export item(s) ready to import.`;
+    }
+    if (typeof parsed !== 'object' || parsed === null) {
+      return 'JSON must be an object or array.';
+    }
+    const record = parsed as Record<string, unknown>;
+    if (record.type === 'sub2api-data' && Array.isArray(record.accounts)) {
+      return `${record.accounts.length} sub2api account(s) ready to import.`;
+    }
+    if (
+      typeof record.id_token === 'string' ||
+      typeof record.idToken === 'string' ||
+      typeof record.access_token === 'string' ||
+      typeof record.accessToken === 'string'
+    ) {
+      return 'CPA token export ready to import.';
+    }
+    const keys = Object.keys(record).slice(0, 5);
     return keys.length > 0 ? `Object keys: ${keys.join(', ')}` : 'Valid empty JSON object.';
   } catch {
     return 'JSON will be checked before import.';
@@ -301,7 +319,7 @@ export function ImportDrawer() {
                   rows={9}
                   spellCheck={false}
                   value={jsonText}
-                  placeholder='{"auth_mode":"oauth","tokens":{...}}'
+                  placeholder='{"id_token":"...","access_token":"..."} 或 [{"id_token":"..."}] 或 {"type":"sub2api-data","accounts":[...]}'
                   onChange={(event) => setJsonText(event.target.value)}
                 />
               </label>
