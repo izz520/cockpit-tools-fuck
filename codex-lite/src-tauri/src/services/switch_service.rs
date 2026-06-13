@@ -5,8 +5,7 @@ use crate::infra::{atomic_write, codex_keychain, paths};
 use crate::models::account::SwitchResult;
 use crate::models::error::{AppError, AppResult};
 use crate::services::{
-    account_service, auth_file_service, codex_app_service, codex_config_service,
-    codex_session_visibility_service,
+    account_service, codex_app_service, codex_config_service, codex_session_visibility_service,
 };
 
 pub fn switch_account(account_id: String) -> AppResult<SwitchResult> {
@@ -33,7 +32,7 @@ fn switch_account_with_writer_and_codex_control(
     open_codex: impl Fn() -> AppResult<()>,
 ) -> AppResult<SwitchResult> {
     let account = account_service::get_account(&account_id)?;
-    let auth_file = auth_file_service::auth_file_from_account(&account)?;
+    let (auth_file, uses_oauth_auth) = account_service::auth_file_for_account_switch(&account)?;
     let auth_path = paths::default_codex_auth_file()?;
     let backup_path = if auth_path.exists() {
         fs::create_dir_all(paths::backups_dir()?).map_err(|err| {
@@ -90,10 +89,7 @@ fn switch_account_with_writer_and_codex_control(
     // On macOS, Codex reads OAuth credentials from the login keychain too. Update
     // it so the switch fully takes effect. Failure here is non-fatal: auth.json is
     // already written, so we log and continue rather than abort the switch.
-    if matches!(
-        account.auth_mode,
-        crate::models::account::CodexAuthMode::OAuth
-    ) {
+    if uses_oauth_auth {
         if let Some(codex_home) = auth_path.parent() {
             if let Ok(auth_json) = std::str::from_utf8(&content) {
                 if let Err(keychain_error) =
@@ -236,6 +232,41 @@ mod tests {
                 .expect("written API key auth should project")
                 .auth_mode,
             CodexAuthMode::ApiKey
+        );
+    }
+
+    #[test]
+    fn api_key_account_with_bound_oauth_writes_oauth_auth_and_keeps_api_current() {
+        let _env = TestEnv::new("switch-bound-oauth");
+        let oauth = oauth_account();
+        let oauth_id = oauth.id.clone();
+        let api_auth =
+            auth_file_service::parse_auth_json(&TestEnv::fixture_content("api-key.json"))
+                .expect("API key fixture should parse");
+        let mut api_account =
+            auth_file_service::account_from_auth(api_auth).expect("API key fixture should import");
+        api_account.bound_oauth_account_id = Some(oauth_id);
+        let api_account_id = api_account.id.clone();
+        storage::save_accounts_file(AccountsFile {
+            schema_version: "1.0.0".to_string(),
+            current_account_id: None,
+            accounts: vec![api_account, oauth],
+            updated_at: 0,
+        })
+        .expect("accounts file should save");
+
+        switch_account_with_writer(api_account_id.clone(), atomic_write::write_atomic)
+            .expect("bound API key switch should succeed");
+        let written_auth =
+            auth_file_service::read_auth_file(&paths::default_codex_auth_file().unwrap())
+                .expect("written auth should parse");
+        let stored = storage::load_accounts_file().expect("accounts should load");
+
+        assert!(written_auth.auth_mode.is_none());
+        assert!(written_auth.tokens.is_some());
+        assert_eq!(
+            stored.current_account_id.as_deref(),
+            Some(api_account_id.as_str())
         );
     }
 }

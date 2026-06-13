@@ -18,6 +18,7 @@ pub fn run() {
             commands::account::get_current_codex_account,
             commands::account::delete_codex_account,
             commands::account::update_codex_api_key_account,
+            commands::account::update_codex_api_key_bound_oauth_account,
             commands::account::switch_codex_account,
             commands::import::import_codex_from_local,
             commands::import::import_codex_from_json,

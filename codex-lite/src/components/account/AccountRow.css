@@ -219,10 +219,37 @@
   min-width: 0;
 }
 
-.api-oauth-binding > span:last-child {
-  overflow: hidden;
+.api-oauth-binding button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+  max-width: 58%;
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 9px;
+  background: oklch(1 0 0 / 0.5);
   color: var(--color-text-muted);
-  font-weight: 720;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 760;
+  cursor: pointer;
+}
+
+.api-oauth-binding button:hover {
+  background: white;
+  color: var(--color-primary-active);
+}
+
+.api-oauth-binding button:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+
+.api-oauth-binding button span {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

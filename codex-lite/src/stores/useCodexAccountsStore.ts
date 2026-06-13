@@ -9,6 +9,7 @@ import {
   refreshCodexQuota,
   switchCodexAccount,
   updateCodexApiKeyAccount,
+  updateCodexApiKeyBoundOAuthAccount,
 } from '../services/codexAccountService';
 
 interface CodexAccountsState {
@@ -33,6 +34,10 @@ interface CodexAccountsState {
     apiKey: string,
     apiBaseUrl: string | null,
     displayName: string | null,
+  ) => Promise<void>;
+  updateApiKeyBoundOAuthAccount: (
+    accountId: string,
+    boundOauthAccountId: string | null,
   ) => Promise<void>;
   upsertAccounts: (accounts: CodexAccountView[]) => void;
 }
@@ -183,6 +188,21 @@ export const useCodexAccountsStore = create<CodexAccountsState>((set, get) => ({
     set({ updatingAccountId: accountId, error: null });
     try {
       const updated = await updateCodexApiKeyAccount(accountId, apiKey, apiBaseUrl, displayName);
+      set((state) => ({
+        accounts: mergeAccount(state.accounts, updated),
+        currentAccountId: updated.isCurrent ? updated.id : state.currentAccountId,
+        selectedAccountId: updated.id,
+        updatingAccountId: null,
+      }));
+    } catch (error) {
+      set({ error: error as AppError, updatingAccountId: null });
+      throw error;
+    }
+  },
+  async updateApiKeyBoundOAuthAccount(accountId, boundOauthAccountId) {
+    set({ updatingAccountId: accountId, error: null });
+    try {
+      const updated = await updateCodexApiKeyBoundOAuthAccount(accountId, boundOauthAccountId);
       set((state) => ({
         accounts: mergeAccount(state.accounts, updated),
         currentAccountId: updated.isCurrent ? updated.id : state.currentAccountId,

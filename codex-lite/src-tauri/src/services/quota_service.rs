@@ -413,6 +413,7 @@ mod tests {
             display_name: "Fixture".to_string(),
             email: Some("fixture@example.test".to_string()),
             auth_mode: CodexAuthMode::OAuth,
+            bound_oauth_account_id: None,
             account_id: None,
             user_id: None,
             plan_type: None,

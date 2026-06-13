@@ -1,4 +1,4 @@
-import { CalendarDays, Check, Clock3, Copy, Eye, KeyRound, Link, Pencil, Play, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
+import { CalendarDays, Check, Clock3, Copy, Eye, KeyRound, Link, Link2, Pencil, Play, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { isOAuthAuthMode, type CodexAccountView } from '../../types/codex';
 import type { AppError } from '../../types/system';
@@ -8,6 +8,7 @@ import './AccountRow.css';
 
 interface AccountRowProps {
   account: CodexAccountView;
+  boundOAuthAccount: CodexAccountView | null;
   refreshing: boolean;
   switching: boolean;
   deleting: boolean;
@@ -15,6 +16,7 @@ interface AccountRowProps {
   onSwitch: (accountId: string) => void;
   onDelete: (accountId: string) => void;
   onEditApiAccount: (account: CodexAccountView) => void;
+  onBindOAuthAccount: (account: CodexAccountView) => void;
   onReauthenticate: (accountId: string) => void;
 }
 
@@ -96,15 +98,16 @@ function getApiBaseUrl(account: CodexAccountView): string {
   return account.apiBaseUrl ?? 'https://api.openai.com/v1';
 }
 
-function getOAuthBindingText(account: CodexAccountView): string {
-  if (!account.email) {
-    return '绑定';
+function getOAuthBindingText(boundOAuthAccount: CodexAccountView | null): string {
+  if (!boundOAuthAccount) {
+    return '未绑定';
   }
-  return account.email;
+  return boundOAuthAccount.email ?? boundOAuthAccount.displayName;
 }
 
 export function AccountRow({
   account,
+  boundOAuthAccount,
   refreshing,
   switching,
   deleting,
@@ -112,6 +115,7 @@ export function AccountRow({
   onSwitch,
   onDelete,
   onEditApiAccount,
+  onBindOAuthAccount,
   onReauthenticate,
 }: AccountRowProps) {
   const [copiedField, setCopiedField] = useState<'apiKey' | 'apiBaseUrl' | null>(null);
@@ -191,9 +195,12 @@ export function AccountRow({
             <span className="api-oauth-binding">
               <span>
                 <ShieldCheck size={14} />
-                OAuth {account.email ? '已绑定' : '未绑定'}
+                OAuth {boundOAuthAccount ? '已绑定' : '未绑定'}
               </span>
-              <span>{getOAuthBindingText(account)}</span>
+              <button type="button" onClick={() => onBindOAuthAccount(account)}>
+                <Link2 size={13} />
+                <span>{getOAuthBindingText(boundOAuthAccount)}</span>
+              </button>
             </span>
           </>
         ) : hasQuotaError && quotaErrorSummary ? (

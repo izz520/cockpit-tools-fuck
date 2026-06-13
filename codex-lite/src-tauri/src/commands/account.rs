@@ -28,6 +28,14 @@ pub fn update_codex_api_key_account(
 }
 
 #[tauri::command]
+pub fn update_codex_api_key_bound_oauth_account(
+    account_id: String,
+    bound_oauth_account_id: Option<String>,
+) -> AppResult<CodexAccountView> {
+    account_service::update_api_key_bound_oauth_account(&account_id, bound_oauth_account_id)
+}
+
+#[tauri::command]
 pub fn switch_codex_account(account_id: String) -> AppResult<SwitchResult> {
     switch_service::switch_account(account_id)
 }

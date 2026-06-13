@@ -20,6 +20,7 @@ export interface CodexAccountView {
   displayName: string;
   email?: string | null;
   authMode: CodexAuthMode;
+  boundOauthAccountId?: string | null;
   accountId?: string | null;
   userId?: string | null;
   planType?: string | null;

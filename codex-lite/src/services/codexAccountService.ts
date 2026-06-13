@@ -33,3 +33,10 @@ export function updateCodexApiKeyAccount(
 ): Promise<CodexAccountView> {
   return invokeCommand('update_codex_api_key_account', { accountId, apiKey, apiBaseUrl, displayName });
 }
+
+export function updateCodexApiKeyBoundOAuthAccount(
+  accountId: string,
+  boundOauthAccountId: string | null,
+): Promise<CodexAccountView> {
+  return invokeCommand('update_codex_api_key_bound_oauth_account', { accountId, boundOauthAccountId });
+}

@@ -1,0 +1,220 @@
+.oauth-binding-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: oklch(0.22 0.02 255 / 0.24);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.oauth-binding-modal {
+  display: grid;
+  gap: 16px;
+  width: min(520px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid oklch(0.94 0.016 255 / 0.76);
+  border-radius: var(--radius-card);
+  background: var(--color-material-strong);
+  box-shadow: var(--shadow-modal);
+  backdrop-filter: var(--blur-material);
+  -webkit-backdrop-filter: var(--blur-material);
+}
+
+.oauth-binding-modal header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.oauth-binding-modal h2 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 820;
+}
+
+.oauth-binding-modal p {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 19px;
+  font-weight: 640;
+}
+
+.oauth-binding-modal header > button {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: oklch(1 0 0 / 0.62);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.oauth-binding-modal header > button:hover {
+  background: white;
+}
+
+.oauth-binding-target {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: oklch(0.985 0.008 235 / 0.68);
+}
+
+.oauth-binding-target span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.oauth-binding-target span svg {
+  color: var(--color-primary-active);
+}
+
+.oauth-binding-target strong,
+.oauth-binding-target code {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oauth-binding-target code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.oauth-binding-list {
+  display: grid;
+  gap: 8px;
+}
+
+.oauth-binding-list > button {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 58px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: oklch(1 0 0 / 0.62);
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.oauth-binding-list > button:hover {
+  background: white;
+}
+
+.oauth-binding-list > button.selected {
+  border-color: oklch(0.68 0.158 260 / 0.76);
+  background: var(--color-primary-soft);
+  box-shadow: 0 0 0 1px oklch(0.68 0.158 260 / 0.22);
+}
+
+.oauth-binding-radio {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid oklch(0.72 0.04 250);
+  border-radius: 999px;
+  color: white;
+}
+
+.oauth-binding-list > button.selected .oauth-binding-radio {
+  border-color: transparent;
+  background: var(--color-primary);
+}
+
+.oauth-binding-account {
+  display: grid;
+  min-width: 0;
+}
+
+.oauth-binding-account strong,
+.oauth-binding-account span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oauth-binding-account strong {
+  color: var(--color-text-strong);
+  font-size: 13px;
+  font-weight: 790;
+}
+
+.oauth-binding-account span {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.oauth-binding-preview,
+.oauth-binding-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-control);
+  background: linear-gradient(90deg, var(--color-success-soft), oklch(0.968 0.02 235));
+  color: var(--color-text);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 690;
+}
+
+.oauth-binding-preview svg,
+.oauth-binding-empty svg {
+  flex: 0 0 auto;
+  color: var(--color-success);
+}
+
+.oauth-binding-modal footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.oauth-binding-modal footer > div {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 520px) {
+  .oauth-binding-modal {
+    padding: 18px;
+  }
+
+  .oauth-binding-modal footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .oauth-binding-modal footer > div {
+    justify-content: flex-end;
+  }
+}

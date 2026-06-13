@@ -4,6 +4,7 @@ import { AccountRow } from '../components/account/AccountRow';
 import { ConfirmSwitchModal } from '../components/account/ConfirmSwitchModal';
 import { ConfirmDeleteModal } from '../components/account/ConfirmDeleteModal';
 import { EditApiAccountModal } from '../components/account/EditApiAccountModal';
+import { OAuthBindingModal } from '../components/account/OAuthBindingModal';
 import { ImportDrawer } from '../components/import/ImportDrawer';
 import { Button } from '../components/ui/Button';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
@@ -41,6 +42,7 @@ export function AccountsPage({ onOpenSessions }: AccountsPageProps) {
     switchToAccount,
     deleteAccount,
     updateApiKeyAccount,
+    updateApiKeyBoundOAuthAccount,
   } = useCodexAccountsStore();
   const sessions = useCodexSessionsStore((state) => state.sessions);
   const loadSessions = useCodexSessionsStore((state) => state.loadSessions);
@@ -49,6 +51,7 @@ export function AccountsPage({ onOpenSessions }: AccountsPageProps) {
   const [pendingSwitchAccountId, setPendingSwitchAccountId] = useState<string | null>(null);
   const [pendingDeleteAccountId, setPendingDeleteAccountId] = useState<string | null>(null);
   const [editingApiAccountId, setEditingApiAccountId] = useState<string | null>(null);
+  const [bindingApiAccountId, setBindingApiAccountId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -83,6 +86,10 @@ export function AccountsPage({ onOpenSessions }: AccountsPageProps) {
     () => accounts.find((account) => account.id === editingApiAccountId) ?? null,
     [accounts, editingApiAccountId],
   );
+  const bindingApiAccount = useMemo(
+    () => accounts.find((account) => account.id === bindingApiAccountId) ?? null,
+    [accounts, bindingApiAccountId],
+  );
 
   async function confirmSwitch(accountId: string) {
     await switchToAccount(accountId);
@@ -97,6 +104,11 @@ export function AccountsPage({ onOpenSessions }: AccountsPageProps) {
   async function saveApiAccount(accountId: string, apiKey: string, apiBaseUrl: string | null, displayName: string | null) {
     await updateApiKeyAccount(accountId, apiKey, apiBaseUrl, displayName);
     setEditingApiAccountId(null);
+  }
+
+  async function saveOAuthBinding(accountId: string, boundOAuthAccountId: string | null) {
+    await updateApiKeyBoundOAuthAccount(accountId, boundOAuthAccountId);
+    setBindingApiAccountId(null);
   }
 
   return (
@@ -197,6 +209,11 @@ export function AccountsPage({ onOpenSessions }: AccountsPageProps) {
             {filteredAccounts.map((account) => (
               <AccountRow
                 account={account}
+                boundOAuthAccount={
+                  account.boundOauthAccountId
+                    ? accounts.find((candidate) => candidate.id === account.boundOauthAccountId) ?? null
+                    : null
+                }
                 key={account.id}
                 refreshing={refreshingAll || refreshingAccountIds.includes(account.id)}
                 switching={switchingAccountId === account.id}
@@ -205,6 +222,7 @@ export function AccountsPage({ onOpenSessions }: AccountsPageProps) {
                 onSwitch={setPendingSwitchAccountId}
                 onDelete={setPendingDeleteAccountId}
                 onEditApiAccount={(nextAccount) => setEditingApiAccountId(nextAccount.id)}
+                onBindOAuthAccount={(nextAccount) => setBindingApiAccountId(nextAccount.id)}
                 onReauthenticate={() => void openOAuthLogin()}
               />
             ))}
@@ -232,6 +250,13 @@ export function AccountsPage({ onOpenSessions }: AccountsPageProps) {
         onSave={(accountId, apiKey, apiBaseUrl, displayName) =>
           void saveApiAccount(accountId, apiKey, apiBaseUrl, displayName)
         }
+      />
+      <OAuthBindingModal
+        apiAccount={bindingApiAccount}
+        accounts={accounts}
+        saving={updatingAccountId === bindingApiAccountId}
+        onCancel={() => setBindingApiAccountId(null)}
+        onSave={(accountId, boundOAuthAccountId) => void saveOAuthBinding(accountId, boundOAuthAccountId)}
       />
     </>
   );

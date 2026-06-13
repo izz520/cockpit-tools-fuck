@@ -247,6 +247,7 @@ mod tests {
             display_name: "FunCode".to_string(),
             email: None,
             auth_mode: CodexAuthMode::ApiKey,
+            bound_oauth_account_id: None,
             account_id: None,
             user_id: None,
             plan_type: Some("API_KEY".to_string()),
