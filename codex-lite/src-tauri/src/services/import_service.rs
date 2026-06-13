@@ -16,14 +16,6 @@ fn now_timestamp() -> i64 {
     chrono::Utc::now().timestamp()
 }
 
-fn imported_result(account: CodexAccountView) -> ImportResult {
-    ImportResult {
-        imported: vec![account],
-        skipped: Vec::new(),
-        failed: Vec::new(),
-    }
-}
-
 fn batch_sessions_dir() -> AppResult<PathBuf> {
     Ok(paths::app_data_dir()?.join("batch-import-sessions"))
 }
@@ -140,7 +132,7 @@ fn failed_preview(id: String, source: String, error: String) -> BatchImportPrevi
     }
 }
 
-fn read_account_from_file(file_path: &str) -> AppResult<CodexAccount> {
+fn read_accounts_from_file(file_path: &str) -> AppResult<Vec<CodexAccount>> {
     let path = PathBuf::from(file_path);
     let content = fs::read_to_string(&path).map_err(|err| {
         AppError::new(
@@ -149,8 +141,7 @@ fn read_account_from_file(file_path: &str) -> AppResult<CodexAccount> {
             "Choose a readable Codex auth JSON file.",
         )
     })?;
-    let auth = auth_file_service::parse_auth_json(&content)?;
-    auth_file_service::account_from_auth(auth)
+    auth_file_service::accounts_from_auth_json(&content)
 }
 
 pub fn import_from_local() -> AppResult<CodexAccountView> {
@@ -160,10 +151,25 @@ pub fn import_from_local() -> AppResult<CodexAccountView> {
 }
 
 pub fn import_from_json(json_content: &str) -> AppResult<ImportResult> {
-    let auth = auth_file_service::parse_auth_json(json_content)?;
-    let account = auth_file_service::account_from_auth(auth)?;
-    let view = account_service::upsert_account(account)?;
-    Ok(imported_result(view))
+    let accounts = auth_file_service::accounts_from_auth_json(json_content)?;
+    let mut imported = Vec::new();
+    let mut failed = Vec::new();
+
+    for account in accounts {
+        match account_service::upsert_account(account) {
+            Ok(view) => imported.push(view),
+            Err(error) => failed.push(ImportFailure {
+                source: "json".to_string(),
+                error: error.message,
+            }),
+        }
+    }
+
+    Ok(ImportResult {
+        imported,
+        skipped: Vec::new(),
+        failed,
+    })
 }
 
 pub fn import_from_files(file_paths: Vec<String>) -> AppResult<ImportResult> {
@@ -175,17 +181,19 @@ pub fn import_from_files(file_paths: Vec<String>) -> AppResult<ImportResult> {
         match fs::read_to_string(&path)
             .map_err(|err| err.to_string())
             .and_then(|content| {
-                auth_file_service::parse_auth_json(&content)
-                    .and_then(auth_file_service::account_from_auth)
-                    .map_err(|err| err.message)
+                auth_file_service::accounts_from_auth_json(&content).map_err(|err| err.message)
             }) {
-            Ok(account) => match account_service::upsert_account(account) {
-                Ok(view) => imported.push(view),
-                Err(err) => failed.push(ImportFailure {
-                    source: file_path,
-                    error: err.message,
-                }),
-            },
+            Ok(accounts) => {
+                for account in accounts {
+                    match account_service::upsert_account(account) {
+                        Ok(view) => imported.push(view),
+                        Err(err) => failed.push(ImportFailure {
+                            source: file_path.clone(),
+                            error: err.message,
+                        }),
+                    }
+                }
+            }
             Err(error) => failed.push(ImportFailure {
                 source: file_path,
                 error,
@@ -223,51 +231,7 @@ pub fn start_batch_import_from_files(
     for (index, file_path) in file_paths.into_iter().enumerate() {
         let item_id = uuid::Uuid::new_v4().to_string();
         let source = file_path.clone();
-        let stored_item = match read_account_from_file(&file_path) {
-            Ok(account) => {
-                let is_existing =
-                    existing_ids.contains(&account.id) || seen_ids.contains(&account.id);
-                let status = if is_existing {
-                    BatchImportItemStatus::Existing
-                } else {
-                    BatchImportItemStatus::Importable
-                };
-                let selected = status == BatchImportItemStatus::Importable;
-                let reason = if is_existing {
-                    Some("Account already exists or appears earlier in this batch.".to_string())
-                } else {
-                    None
-                };
-                let quota_warning = if check_quota && account.auth_mode == CodexAuthMode::OAuth {
-                    Some("Quota check is deferred until after import in this version.".to_string())
-                } else {
-                    None
-                };
-                seen_ids.insert(account.id.clone());
-                BatchImportSessionItem {
-                    preview: preview_from_account(
-                        item_id,
-                        source,
-                        &account,
-                        status,
-                        selected,
-                        reason,
-                        quota_warning,
-                    ),
-                    account: Some(account),
-                }
-            }
-            Err(error) => BatchImportSessionItem {
-                preview: failed_preview(
-                    item_id,
-                    source,
-                    format!("{}: {}", error.code, error.message),
-                ),
-                account: None,
-            },
-        };
-
-        if stored_item.preview.source.trim().is_empty() {
+        if source.trim().is_empty() {
             return Err(AppError::new(
                 "BATCH_IMPORT_INVALID_SOURCE",
                 format!("Batch import file path at index {} is empty.", index),
@@ -275,7 +239,62 @@ pub fn start_batch_import_from_files(
             ));
         }
 
-        stored_items.push(stored_item);
+        match read_accounts_from_file(&file_path) {
+            Ok(accounts) => {
+                for (account_index, account) in accounts.into_iter().enumerate() {
+                    let is_existing =
+                        existing_ids.contains(&account.id) || seen_ids.contains(&account.id);
+                    let status = if is_existing {
+                        BatchImportItemStatus::Existing
+                    } else {
+                        BatchImportItemStatus::Importable
+                    };
+                    let selected = status == BatchImportItemStatus::Importable;
+                    let reason = if is_existing {
+                        Some("Account already exists or appears earlier in this batch.".to_string())
+                    } else {
+                        None
+                    };
+                    let quota_warning = if check_quota && account.auth_mode == CodexAuthMode::OAuth
+                    {
+                        Some(
+                            "Quota check is deferred until after import in this version."
+                                .to_string(),
+                        )
+                    } else {
+                        None
+                    };
+                    seen_ids.insert(account.id.clone());
+                    let preview_source = if account_index == 0 {
+                        source.clone()
+                    } else {
+                        format!("{}#{}", source, account_index + 1)
+                    };
+                    stored_items.push(BatchImportSessionItem {
+                        preview: preview_from_account(
+                            uuid::Uuid::new_v4().to_string(),
+                            preview_source,
+                            &account,
+                            status,
+                            selected,
+                            reason,
+                            quota_warning,
+                        ),
+                        account: Some(account),
+                    });
+                }
+            }
+            Err(error) => {
+                stored_items.push(BatchImportSessionItem {
+                    preview: failed_preview(
+                        item_id,
+                        source,
+                        format!("{}: {}", error.code, error.message),
+                    ),
+                    account: None,
+                });
+            }
+        }
     }
 
     let created_at = now_timestamp();

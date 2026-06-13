@@ -10,6 +10,9 @@ pub struct CodexAuthFile {
     pub auth_mode: Option<String>,
     #[serde(
         rename = "OPENAI_API_KEY",
+        alias = "openai_api_key",
+        alias = "api_key",
+        alias = "apiKey",
         default,
         skip_serializing_if = "Option::is_none"
     )]

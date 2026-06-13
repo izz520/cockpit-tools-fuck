@@ -43,6 +43,153 @@ pub fn parse_auth_json(content: &str) -> AppResult<CodexAuthFile> {
     })
 }
 
+fn parse_auth_value(value: &serde_json::Value) -> AppResult<CodexAuthFile> {
+    serde_json::from_value(value.clone()).map_err(|err| {
+        AppError::new(
+            "CODEX_AUTH_INVALID_FORMAT",
+            format!("Codex auth JSON is invalid: {}", err),
+            "Choose a valid Codex auth JSON file.",
+        )
+    })
+}
+
+fn read_string_path(value: &serde_json::Value, path: &[&str]) -> Option<String> {
+    let mut current = value;
+    for key in path {
+        current = current.get(*key)?;
+    }
+    current
+        .as_str()
+        .map(str::trim)
+        .filter(|item| !item.is_empty())
+        .map(ToString::to_string)
+}
+
+fn auth_from_portable_value(value: &serde_json::Value) -> Option<CodexAuthFile> {
+    let id_token = read_string_path(value, &["id_token"])
+        .or_else(|| read_string_path(value, &["idToken"]))
+        .or_else(|| read_string_path(value, &["credentials", "id_token"]))
+        .or_else(|| read_string_path(value, &["credentials", "idToken"]))?;
+    let access_token = read_string_path(value, &["access_token"])
+        .or_else(|| read_string_path(value, &["accessToken"]))
+        .or_else(|| read_string_path(value, &["credentials", "access_token"]))
+        .or_else(|| read_string_path(value, &["credentials", "accessToken"]))?;
+    let refresh_token = read_string_path(value, &["refresh_token"])
+        .or_else(|| read_string_path(value, &["refreshToken"]))
+        .or_else(|| read_string_path(value, &["session_token"]))
+        .or_else(|| read_string_path(value, &["sessionToken"]))
+        .or_else(|| read_string_path(value, &["credentials", "refresh_token"]))
+        .or_else(|| read_string_path(value, &["credentials", "refreshToken"]))
+        .or_else(|| read_string_path(value, &["credentials", "session_token"]))
+        .or_else(|| read_string_path(value, &["credentials", "sessionToken"]));
+    let account_id = read_string_path(value, &["account_id"])
+        .or_else(|| read_string_path(value, &["accountId"]))
+        .or_else(|| read_string_path(value, &["credentials", "account_id"]))
+        .or_else(|| read_string_path(value, &["credentials", "accountId"]))
+        .or_else(|| read_string_path(value, &["credentials", "chatgpt_account_id"]));
+
+    Some(CodexAuthFile {
+        auth_mode: Some("oauth".to_string()),
+        openai_api_key: None,
+        base_url: read_string_path(value, &["api_base_url"])
+            .or_else(|| read_string_path(value, &["apiBaseUrl"]))
+            .or_else(|| read_string_path(value, &["base_url"]))
+            .or_else(|| read_string_path(value, &["baseUrl"]))
+            .or_else(|| read_string_path(value, &["credentials", "api_base_url"]))
+            .or_else(|| read_string_path(value, &["credentials", "apiBaseUrl"]))
+            .or_else(|| read_string_path(value, &["credentials", "base_url"]))
+            .or_else(|| read_string_path(value, &["credentials", "baseUrl"])),
+        tokens: Some(crate::models::auth::CodexAuthTokens {
+            id_token,
+            access_token,
+            refresh_token,
+            account_id,
+        }),
+        last_refresh: value.get("last_refresh").cloned().or_else(|| {
+            value
+                .get("lastRefresh")
+                .cloned()
+                .or_else(|| value.get("credentials")?.get("last_refresh").cloned())
+        }),
+    })
+}
+
+fn account_from_import_value(value: &serde_json::Value) -> AppResult<Option<CodexAccount>> {
+    let auth = match parse_auth_value(value) {
+        Ok(auth) if auth.tokens.is_some() || auth.openai_api_key.is_some() => Some(auth),
+        _ => auth_from_portable_value(value),
+    };
+    let Some(auth) = auth else {
+        return Ok(None);
+    };
+
+    let mut account = account_from_auth(auth)?;
+    if let Some(display_name) = read_string_path(value, &["display_name"])
+        .or_else(|| read_string_path(value, &["displayName"]))
+        .or_else(|| read_string_path(value, &["name"]))
+    {
+        account.display_name = display_name;
+    }
+    if let Some(email) = read_string_path(value, &["email"])
+        .or_else(|| read_string_path(value, &["credentials", "email"]))
+    {
+        account.email = Some(email.clone());
+        if account.display_name == "Codex OAuth Account" {
+            account.display_name = email;
+        }
+    }
+    if let Some(plan_type) = read_string_path(value, &["plan_type"])
+        .or_else(|| read_string_path(value, &["planType"]))
+        .or_else(|| read_string_path(value, &["credentials", "plan_type"]))
+        .or_else(|| read_string_path(value, &["credentials", "planType"]))
+    {
+        account.plan_type = Some(plan_type);
+    }
+    if let Some(account_id) = read_string_path(value, &["account_id"])
+        .or_else(|| read_string_path(value, &["accountId"]))
+        .or_else(|| read_string_path(value, &["credentials", "account_id"]))
+        .or_else(|| read_string_path(value, &["credentials", "accountId"]))
+        .or_else(|| read_string_path(value, &["credentials", "chatgpt_account_id"]))
+    {
+        account.account_id = Some(account_id);
+    }
+    Ok(Some(account))
+}
+
+fn collect_import_candidate_values(value: &serde_json::Value) -> Vec<serde_json::Value> {
+    if let Some(items) = value.as_array() {
+        return items.clone();
+    }
+    if let Some(accounts) = value.get("accounts").and_then(|item| item.as_array()) {
+        return accounts.clone();
+    }
+    vec![value.clone()]
+}
+
+pub fn accounts_from_auth_json(content: &str) -> AppResult<Vec<CodexAccount>> {
+    let value = serde_json::from_str::<serde_json::Value>(content).map_err(|err| {
+        AppError::new(
+            "CODEX_AUTH_INVALID_FORMAT",
+            format!("Codex auth JSON is invalid: {}", err),
+            "Choose a valid Codex auth JSON file.",
+        )
+    })?;
+    let mut accounts = Vec::new();
+    for candidate in collect_import_candidate_values(&value) {
+        if let Some(account) = account_from_import_value(&candidate)? {
+            accounts.push(account);
+        }
+    }
+    if accounts.is_empty() {
+        return Err(AppError::new(
+            "CODEX_AUTH_INVALID_FORMAT",
+            "Codex auth file does not contain OAuth tokens or an API key.",
+            "Import a valid Codex auth JSON file, CPA token export, sub2api export, or API Key JSON.",
+        ));
+    }
+    Ok(accounts)
+}
+
 pub fn account_from_auth(auth: CodexAuthFile) -> AppResult<CodexAccount> {
     if let Some(api_key_value) = auth
         .openai_api_key
@@ -269,7 +416,9 @@ fn decode_jwt_payload(id_token: &str) -> AppResult<JwtPayload> {
 
 #[cfg(test)]
 mod tests {
-    use super::{account_from_auth, auth_file_from_account, parse_auth_json};
+    use super::{
+        account_from_auth, accounts_from_auth_json, auth_file_from_account, parse_auth_json,
+    };
     use crate::models::account::CodexAuthMode;
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 
@@ -327,6 +476,86 @@ mod tests {
 
         assert_eq!(account.account_id.as_deref(), Some("acct_from_access"));
         assert_eq!(account.plan_type.as_deref(), Some("plus"));
+    }
+
+    #[test]
+    fn imports_portable_cpa_token_object() {
+        let id_token = make_jwt(serde_json::json!({
+            "email": "portable@example.test",
+            "https://api.openai.com/auth": {
+                "chatgpt_user_id": "user_portable",
+                "chatgpt_account_id": "acct_portable",
+                "chatgpt_plan_type": "team"
+            }
+        }));
+        let accounts = accounts_from_auth_json(
+            &serde_json::json!({
+                "type": "codex",
+                "email": "portable@example.test",
+                "id_token": id_token,
+                "access_token": make_jwt(serde_json::json!({})),
+                "refresh_token": "refresh_fixture",
+                "account_id": "acct_portable"
+            })
+            .to_string(),
+        )
+        .expect("portable CPA JSON should import");
+
+        assert_eq!(accounts.len(), 1);
+        assert_eq!(accounts[0].email.as_deref(), Some("portable@example.test"));
+        assert_eq!(accounts[0].account_id.as_deref(), Some("acct_portable"));
+        assert_eq!(accounts[0].plan_type.as_deref(), Some("team"));
+    }
+
+    #[test]
+    fn imports_portable_array_and_sub2api_accounts() {
+        let id_token = make_jwt(serde_json::json!({
+            "email": "sub2api@example.test",
+            "https://api.openai.com/auth": {
+                "chatgpt_user_id": "user_sub2api",
+                "chatgpt_account_id": "acct_sub2api"
+            }
+        }));
+        let array_payload = serde_json::json!([
+            {
+                "type": "codex",
+                "id_token": id_token,
+                "access_token": make_jwt(serde_json::json!({})),
+                "refresh_token": "refresh_fixture"
+            }
+        ]);
+        let sub2api_payload = serde_json::json!({
+            "type": "sub2api-data",
+            "version": 1,
+            "accounts": [
+                {
+                    "name": "Fixture Team",
+                    "platform": "openai",
+                    "type": "oauth",
+                    "credentials": {
+                        "id_token": array_payload[0]["id_token"],
+                        "access_token": array_payload[0]["access_token"],
+                        "refresh_token": "refresh_fixture",
+                        "email": "sub2api@example.test",
+                        "chatgpt_account_id": "acct_sub2api",
+                        "plan_type": "team"
+                    }
+                }
+            ]
+        });
+
+        let array_accounts =
+            accounts_from_auth_json(&array_payload.to_string()).expect("array JSON should import");
+        let sub2api_accounts = accounts_from_auth_json(&sub2api_payload.to_string())
+            .expect("sub2api JSON should import");
+
+        assert_eq!(array_accounts.len(), 1);
+        assert_eq!(sub2api_accounts.len(), 1);
+        assert_eq!(sub2api_accounts[0].display_name, "Fixture Team");
+        assert_eq!(
+            sub2api_accounts[0].email.as_deref(),
+            Some("sub2api@example.test")
+        );
     }
 
     #[test]
