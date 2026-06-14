@@ -5,12 +5,12 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use rusqlite::Connection;
-use serde_json::Value as JsonValue;
+use serde_json::{Map as JsonMap, Value as JsonValue};
 
-use crate::infra::{atomic_write, paths};
+use crate::infra::{atomic_write, paths, storage};
 use crate::models::error::{AppError, AppResult};
 use crate::models::session::{CodexSessionView, SessionMutationResult};
-use crate::services::codex_config_service;
+use crate::services::{codex_app_service, codex_config_service};
 
 const STATE_DB_FILE: &str = "state_5.sqlite";
 const SESSION_INDEX_FILE: &str = "session_index.jsonl";
@@ -54,9 +54,17 @@ pub fn list_default_codex_sessions() -> AppResult<Vec<CodexSessionView>> {
 pub fn restore_default_codex_sessions_visibility(
     session_ids: Vec<String>,
 ) -> AppResult<SessionMutationResult> {
+    codex_app_service::quit_codex_for_switch()?;
     let codex_home = paths::default_codex_home()?;
     let target_provider = current_target_provider()?;
-    restore_sessions_visibility(&codex_home, &target_provider, &session_ids)
+    let restore_result = restore_sessions_visibility(&codex_home, &target_provider, &session_ids);
+    let open_result = codex_app_service::open_codex_after_switch();
+
+    match (restore_result, open_result) {
+        (Ok(result), Ok(())) => Ok(result),
+        (Err(err), _) => Err(err),
+        (Ok(_), Err(err)) => Err(err),
+    }
 }
 
 pub fn delete_default_codex_sessions(session_ids: Vec<String>) -> AppResult<SessionMutationResult> {
@@ -65,6 +73,17 @@ pub fn delete_default_codex_sessions(session_ids: Vec<String>) -> AppResult<Sess
 }
 
 fn current_target_provider() -> AppResult<String> {
+    let accounts_file = storage::load_accounts_file()?;
+    if let Some(current_account_id) = accounts_file.current_account_id {
+        if let Some(account) = accounts_file
+            .accounts
+            .iter()
+            .find(|account| account.id == current_account_id)
+        {
+            return Ok(codex_config_service::account_target_provider(account));
+        }
+    }
+
     codex_config_service::read_active_provider(&paths::default_codex_config_file()?)
 }
 
@@ -161,12 +180,14 @@ fn restore_sessions_visibility(
     let mut updated_count =
         update_sqlite_selected_threads_provider(codex_home, target_provider, &selected_ids)?;
 
-    for meta in read_rollout_session_metas(codex_home)? {
+    let metas = read_rollout_session_metas(codex_home)?;
+    for meta in &metas {
         if selected_ids.contains(&meta.id) {
             rewrite_rollout_provider(&meta.rollout_path, target_provider)?;
             updated_count += 1;
         }
     }
+    updated_count += upsert_session_index_entries(codex_home, &metas, &selected_ids)?;
 
     Ok(SessionMutationResult {
         updated_count,
@@ -214,12 +235,19 @@ fn repair_codex_home_for_provider(codex_home: &Path, target_provider: &str) -> A
         ));
     }
 
-    let rollout_paths = list_rollout_files(codex_home)?;
-    for rollout_path in rollout_paths {
-        rewrite_rollout_provider(&rollout_path, target_provider)?;
+    let metas = read_rollout_session_metas(codex_home)?;
+    for meta in &metas {
+        rewrite_rollout_provider(&meta.rollout_path, target_provider)?;
     }
 
     update_sqlite_threads_provider(codex_home, target_provider)?;
+    let all_ids = metas
+        .iter()
+        .map(|meta| meta.id.clone())
+        .collect::<HashSet<_>>();
+    if !all_ids.is_empty() {
+        upsert_session_index_entries(codex_home, &metas, &all_ids)?;
+    }
     Ok(())
 }
 
@@ -841,6 +869,122 @@ fn remove_session_index_entries(
     atomic_write::write_atomic(&index_path, next.as_bytes())
 }
 
+fn upsert_session_index_entries(
+    codex_home: &Path,
+    metas: &[RolloutSessionMeta],
+    selected_ids: &HashSet<String>,
+) -> AppResult<usize> {
+    let index_path = codex_home.join(SESSION_INDEX_FILE);
+    let meta_by_id = metas
+        .iter()
+        .filter(|meta| selected_ids.contains(&meta.id))
+        .map(|meta| (meta.id.as_str(), meta))
+        .collect::<BTreeMap<_, _>>();
+
+    if meta_by_id.is_empty() {
+        return Ok(0);
+    }
+
+    let content = match fs::read_to_string(&index_path) {
+        Ok(value) => value,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(err) => {
+            return Err(AppError::new(
+                "CODEX_SESSION_INDEX_READ_FAILED",
+                format!("Failed to read {}: {}", index_path.display(), err),
+                "Close Codex and try again.",
+            ));
+        }
+    };
+
+    let mut changed = false;
+    let mut indexed_ids = HashSet::new();
+    let mut lines = Vec::new();
+    for line in content.lines() {
+        let Some(id) = session_index_line_id(line) else {
+            lines.push(line.to_string());
+            continue;
+        };
+        indexed_ids.insert(id.clone());
+        if let Some(meta) = meta_by_id.get(id.as_str()) {
+            let next_line = build_session_index_line(meta)?;
+            if next_line != line {
+                changed = true;
+            }
+            lines.push(next_line);
+        } else {
+            lines.push(line.to_string());
+        }
+    }
+
+    for (id, meta) in &meta_by_id {
+        if indexed_ids.contains(*id) {
+            continue;
+        }
+        lines.push(build_session_index_line(meta)?);
+        changed = true;
+    }
+
+    if !changed {
+        return Ok(0);
+    }
+
+    let next = if lines.is_empty() {
+        String::new()
+    } else {
+        format!("{}\n", lines.join("\n"))
+    };
+    atomic_write::write_atomic(&index_path, next.as_bytes())?;
+    Ok(meta_by_id.len())
+}
+
+fn session_index_line_id(line: &str) -> Option<String> {
+    serde_json::from_str::<JsonValue>(line)
+        .ok()
+        .and_then(|value| {
+            value
+                .get("id")
+                .and_then(JsonValue::as_str)
+                .map(str::to_string)
+        })
+}
+
+fn build_session_index_line(meta: &RolloutSessionMeta) -> AppResult<String> {
+    let mut object = JsonMap::new();
+    object.insert("id".to_string(), JsonValue::String(meta.id.clone()));
+    object.insert(
+        "thread_name".to_string(),
+        JsonValue::String(
+            meta.title
+                .clone()
+                .unwrap_or_else(|| display_title_from_id(&meta.id)),
+        ),
+    );
+    object.insert(
+        "updated_at".to_string(),
+        JsonValue::String(
+            meta.updated_at
+                .and_then(timestamp_ms_to_rfc3339)
+                .unwrap_or_else(|| {
+                    chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Micros, true)
+                }),
+        ),
+    );
+
+    serde_json::to_string(&JsonValue::Object(object)).map_err(|err| {
+        AppError::new(
+            "CODEX_SESSION_INDEX_SERIALIZE_FAILED",
+            format!("Failed to serialize Codex session index entry: {}", err),
+            "Check the Codex session index format.",
+        )
+    })
+}
+
+fn timestamp_ms_to_rfc3339(timestamp_ms: i64) -> Option<String> {
+    chrono::DateTime::<chrono::Utc>::from_timestamp_millis(timestamp_ms)
+        .map(|value| value.to_rfc3339_opts(chrono::SecondsFormat::Micros, true))
+}
+
 fn normalized_id_set(session_ids: &[String]) -> AppResult<HashSet<String>> {
     let ids = session_ids
         .iter()
@@ -906,7 +1050,10 @@ fn display_title_from_id(id: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{repair_codex_home_for_provider, update_sqlite_threads_provider, STATE_DB_FILE};
+    use super::{
+        repair_codex_home_for_provider, update_sqlite_threads_provider, SESSION_INDEX_FILE,
+        STATE_DB_FILE,
+    };
     use rusqlite::Connection;
 
     fn temp_dir(name: &str) -> std::path::PathBuf {
@@ -966,6 +1113,26 @@ mod tests {
             )
             .expect("provider should be read");
         assert_eq!(provider, "relay");
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn repair_upserts_rollout_sessions_into_index() {
+        let root = temp_dir("session-index");
+        let rollout_dir = root.join("sessions").join("2026").join("06").join("13");
+        std::fs::create_dir_all(&rollout_dir).expect("rollout dir should be created");
+        std::fs::write(
+            rollout_dir.join("rollout-s1.jsonl"),
+            "{\"type\":\"session_meta\",\"payload\":{\"id\":\"s1\",\"thread_name\":\"Hello\",\"model_provider\":\"openai\",\"updated_at_ms\":1791849600000}}\n",
+        )
+        .expect("rollout should be written");
+
+        repair_codex_home_for_provider(&root, "codex_lite_api_key").expect("repair should work");
+
+        let index = std::fs::read_to_string(root.join(SESSION_INDEX_FILE))
+            .expect("index should be written");
+        assert!(index.contains("\"id\":\"s1\""));
+        assert!(index.contains("\"thread_name\":\"Hello\""));
         let _ = std::fs::remove_dir_all(root);
     }
 }

@@ -12,6 +12,21 @@ const PROVIDER_END: &str = "# <<< codex-lite api provider end";
 pub const API_PROVIDER_ID: &str = "codex_lite_api_key";
 pub const DEFAULT_PROVIDER_ID: &str = "openai";
 
+pub fn account_target_provider(account: &CodexAccount) -> String {
+    match account.auth_mode {
+        CodexAuthMode::ApiKey => account
+            .api_base_url
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(normalize_base_url)
+            .filter(|value| !is_openai_base_url(value))
+            .map(|_| API_PROVIDER_ID.to_string())
+            .unwrap_or_else(|| DEFAULT_PROVIDER_ID.to_string()),
+        CodexAuthMode::OAuth => DEFAULT_PROVIDER_ID.to_string(),
+    }
+}
+
 pub fn apply_account_config(account: &CodexAccount, config_path: &Path) -> AppResult<()> {
     let content = read_optional_config(config_path)?;
     let next = match account.auth_mode {
@@ -68,10 +83,15 @@ fn read_optional_config(config_path: &Path) -> AppResult<String> {
 }
 
 fn apply_api_provider(content: &str, account: &CodexAccount, base_url: &str) -> String {
-    let content_without_provider = remove_marked_block(content, PROVIDER_START, PROVIDER_END);
-    let (prelude, rest) = split_prelude(&content_without_provider);
-    let (prelude_without_model_provider, previous_model_provider) =
+    let previous_model_provider_from_active = read_previous_model_provider(content);
+    let content_without_active = remove_marked_block(content, ACTIVE_START, ACTIVE_END);
+    let content_without_provider =
+        remove_marked_block(&content_without_active, PROVIDER_START, PROVIDER_END);
+    let cleaned_content = remove_orphan_marker_lines(&content_without_provider);
+    let (prelude, rest) = split_prelude(&cleaned_content);
+    let (prelude_without_model_provider, top_level_model_provider) =
         remove_top_level_model_provider(prelude);
+    let previous_model_provider = previous_model_provider_from_active.or(top_level_model_provider);
 
     let active_block = build_active_provider_block(previous_model_provider.as_deref());
     let provider_block = build_api_provider_block(account, base_url);
@@ -87,9 +107,11 @@ fn apply_api_provider(content: &str, account: &CodexAccount, base_url: &str) -> 
 fn clear_active_provider(content: &str) -> String {
     let previous_model_provider = read_previous_model_provider(content);
     let without_active = remove_marked_block(content, ACTIVE_START, ACTIVE_END);
+    let without_provider = remove_marked_block(&without_active, PROVIDER_START, PROVIDER_END);
+    let cleaned_content = remove_orphan_marker_lines(&without_provider);
     let restored = match previous_model_provider {
         Some(value) => {
-            let (prelude, rest) = split_prelude(&without_active);
+            let (prelude, rest) = split_prelude(&cleaned_content);
             let (prelude_without_model_provider, _) = remove_top_level_model_provider(prelude);
             format!(
                 "{}{}{}",
@@ -98,7 +120,7 @@ fn clear_active_provider(content: &str) -> String {
                 ensure_leading_newline(rest)
             )
         }
-        None => without_active,
+        None => cleaned_content,
     };
 
     restored
@@ -188,21 +210,38 @@ fn read_previous_model_provider(content: &str) -> Option<String> {
 }
 
 fn remove_marked_block(content: &str, start_marker: &str, end_marker: &str) -> String {
-    let Some(start) = content.find(start_marker) else {
-        return content.to_string();
-    };
-    let after_start = &content[start..];
-    let Some(relative_end) = after_start.find(end_marker) else {
-        return content.to_string();
-    };
-    let end = start + relative_end + end_marker.len();
-    let end_with_newline = if content[end..].starts_with('\n') {
-        end + 1
-    } else {
-        end
-    };
+    let mut next = content.to_string();
+    while let Some(start) = next.find(start_marker) {
+        let after_start = &next[start..];
+        let Some(relative_end) = after_start.find(end_marker) else {
+            break;
+        };
+        let end = start + relative_end + end_marker.len();
+        let end_with_newline = if next[end..].starts_with('\n') {
+            end + 1
+        } else {
+            end
+        };
 
-    format!("{}{}", &content[..start], &content[end_with_newline..])
+        next.replace_range(start..end_with_newline, "");
+    }
+
+    next
+}
+
+fn remove_orphan_marker_lines(content: &str) -> String {
+    let lines = content
+        .lines()
+        .filter(|line| {
+            !matches!(
+                line.trim(),
+                ACTIVE_START | ACTIVE_END | PROVIDER_START | PROVIDER_END
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    ensure_trailing_newline(&lines)
 }
 
 fn parse_toml_string_assignment(line: &str) -> Option<String> {
@@ -286,5 +325,42 @@ mod tests {
 
         assert!(output.contains("model_provider = \"aimami\""));
         assert!(!output.contains("codex_lite_api_key"));
+    }
+
+    #[test]
+    fn apply_api_provider_cleans_duplicate_marker_blocks() {
+        let input = "# >>> codex-lite active provider start\n# <<< codex-lite active provider end\n# >>> codex-lite active provider start\n# <<< codex-lite active provider end\n# <<< codex-lite active provider end\nmodel = \"gpt-5.5\"\n";
+
+        let output = apply_api_provider(input, &api_account(), "https://api.yaso11.tech/v1");
+
+        assert_eq!(
+            output
+                .matches("# >>> codex-lite active provider start")
+                .count(),
+            1
+        );
+        assert_eq!(
+            output
+                .matches("# <<< codex-lite active provider end")
+                .count(),
+            1
+        );
+        assert_eq!(
+            output
+                .matches("model_provider = \"codex_lite_api_key\"")
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn clear_active_provider_removes_api_provider_block() {
+        let input = "# >>> codex-lite active provider start\n# previous_model_provider = \"openai\"\nmodel_provider = \"codex_lite_api_key\"\n# <<< codex-lite active provider end\nmodel = \"gpt-5.5\"\n# >>> codex-lite api provider start\n[model_providers.codex_lite_api_key]\nbase_url = \"https://api.yaso11.tech/v1\"\n# <<< codex-lite api provider end\n";
+
+        let output = clear_active_provider(input);
+
+        assert!(output.contains("model_provider = \"openai\""));
+        assert!(!output.contains("[model_providers.codex_lite_api_key]"));
+        assert!(!output.contains("codex-lite api provider"));
     }
 }

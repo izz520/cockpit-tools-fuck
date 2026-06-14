@@ -83,7 +83,7 @@ fn switch_account_with_writer_and_codex_control(
         return Err(config_error);
     }
 
-    let target_provider = codex_config_service::read_active_provider(&config_path)?;
+    let target_provider = codex_config_service::account_target_provider(&account);
     codex_session_visibility_service::repair_default_codex_home_for_provider(&target_provider)?;
 
     // On macOS, Codex reads OAuth credentials from the login keychain too. Update
