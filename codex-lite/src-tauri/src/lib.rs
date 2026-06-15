@@ -13,6 +13,22 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(error) =
+                    crate::services::codex_local_access_gateway::restore_for_current_account().await
+                {
+                    tracing::warn!(
+                        code = error.code,
+                        message = error.message,
+                        "failed to restore codex local access gateway"
+                    );
+                }
+                drop(handle);
+            });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::account::list_codex_accounts,
             commands::account::get_current_codex_account,

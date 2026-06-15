@@ -8,7 +8,7 @@ use crate::models::error::{AppError, AppResult};
 use crate::models::session::SessionRepairSummary;
 use crate::services::{
     account_service, auth_file_service, codex_app_service, codex_config_service,
-    codex_session_visibility_service, oauth_service,
+    codex_local_access_gateway, codex_session_visibility_service, oauth_service,
 };
 
 fn launch_credential_kind_for_provider(provider: &str) -> &'static str {
@@ -208,9 +208,28 @@ async fn switch_account_with_writer_and_codex_control(
         return Err(write_error);
     }
 
-    if let Err(config_error) = codex_config_service::apply_account_config(&account, &config_path) {
+    let provider_base_url = match codex_local_access_gateway::ensure_for_account(&account).await {
+        Ok(base_url) => base_url,
+        Err(error) => {
+            auth_snapshot.restore();
+            config_snapshot.restore();
+            return Err(error);
+        }
+    };
+    if let Err(config_error) = codex_config_service::apply_account_config_with_provider_base_url(
+        &account,
+        &config_path,
+        provider_base_url.as_deref(),
+    ) {
         auth_snapshot.restore();
         config_snapshot.restore();
+        if let Err(error) = codex_local_access_gateway::restore_for_current_account().await {
+            tracing::warn!(
+                code = error.code,
+                message = error.message,
+                "failed to restore gateway after config write failure"
+            );
+        }
         return Err(config_error);
     }
 
@@ -225,6 +244,14 @@ async fn switch_account_with_writer_and_codex_control(
             Err(error) => {
                 auth_snapshot.restore();
                 config_snapshot.restore();
+                if let Err(error) = codex_local_access_gateway::restore_for_current_account().await
+                {
+                    tracing::warn!(
+                        code = error.code,
+                        message = error.message,
+                        "failed to restore gateway after session repair failure"
+                    );
+                }
                 return Err(error);
             }
         }
@@ -266,7 +293,7 @@ mod tests {
     use crate::infra::{atomic_write, paths, storage};
     use crate::models::account::{AccountsFile, CodexAuthMode};
     use crate::models::error::AppError;
-    use crate::services::auth_file_service;
+    use crate::services::{auth_file_service, codex_local_access_gateway};
     use crate::test_support::TestEnv;
 
     fn oauth_account() -> crate::models::account::CodexAccount {
@@ -424,10 +451,19 @@ mod tests {
         let written_auth =
             auth_file_service::read_auth_file(&paths::default_codex_auth_file().unwrap())
                 .expect("written auth should parse");
+        let written_config = std::fs::read_to_string(paths::default_codex_config_file().unwrap())
+            .expect("written config should be readable");
         let stored = storage::load_accounts_file().expect("accounts should load");
 
         assert!(written_auth.auth_mode.is_none());
         assert!(written_auth.tokens.is_some());
+        assert!(written_config.contains("model_provider = \"codex_local_access\""));
+        assert!(written_config.contains(&format!(
+            "base_url = \"{}\"",
+            codex_local_access_gateway::GATEWAY_PROVIDER_BASE_URL
+        )));
+        assert!(written_config.contains("supports_websockets = false"));
+        assert!(!written_config.contains("base_url = \"https://api.openai.com/v1\""));
         assert_eq!(
             stored.current_account_id.as_deref(),
             Some(api_account_id.as_str())

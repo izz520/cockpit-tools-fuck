@@ -2,7 +2,7 @@ use crate::infra::{atomic_write, codex_keychain, paths, storage};
 use crate::models::account::{CodexAccount, CodexAccountView, CodexAuthMode};
 use crate::models::auth::CodexAuthFile;
 use crate::models::error::{AppError, AppResult};
-use crate::services::{auth_file_service, codex_config_service};
+use crate::services::{auth_file_service, codex_config_service, codex_local_access_gateway};
 
 fn now_timestamp() -> i64 {
     chrono::Utc::now().timestamp()
@@ -150,7 +150,7 @@ pub fn auth_file_for_account_switch(account: &CodexAccount) -> AppResult<(CodexA
     ))
 }
 
-fn sync_active_api_account(account: &CodexAccount) -> AppResult<()> {
+async fn sync_active_api_account(account: &CodexAccount) -> AppResult<()> {
     let (auth_file, uses_oauth_auth) = auth_file_for_account_switch(account)?;
     let auth_content = serde_json::to_vec_pretty(&auth_file).map_err(|err| {
         AppError::new(
@@ -177,10 +177,15 @@ fn sync_active_api_account(account: &CodexAccount) -> AppResult<()> {
         }
     }
     let config_path = paths::default_codex_config_file()?;
-    codex_config_service::apply_account_config(account, &config_path)
+    let provider_base_url = codex_local_access_gateway::ensure_for_account(account).await?;
+    codex_config_service::apply_account_config_with_provider_base_url(
+        account,
+        &config_path,
+        provider_base_url.as_deref(),
+    )
 }
 
-pub fn update_api_key_account(
+pub async fn update_api_key_account(
     account_id: &str,
     api_key: String,
     api_base_url: Option<String>,
@@ -227,13 +232,13 @@ pub fn update_api_key_account(
     storage::save_accounts_file(file)?;
 
     if is_current {
-        sync_active_api_account(&updated)?;
+        sync_active_api_account(&updated).await?;
     }
 
     Ok(updated.to_view(is_current))
 }
 
-pub fn update_api_key_bound_oauth_account(
+pub async fn update_api_key_bound_oauth_account(
     account_id: &str,
     bound_oauth_account_id: Option<String>,
 ) -> AppResult<CodexAccountView> {
@@ -270,7 +275,7 @@ pub fn update_api_key_bound_oauth_account(
     storage::save_accounts_file(file)?;
 
     if is_current {
-        sync_active_api_account(&updated)?;
+        sync_active_api_account(&updated).await?;
     }
 
     Ok(updated.to_view(is_current))

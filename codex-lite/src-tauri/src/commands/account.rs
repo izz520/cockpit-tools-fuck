@@ -18,21 +18,21 @@ pub fn delete_codex_account(account_id: String) -> AppResult<()> {
 }
 
 #[tauri::command]
-pub fn update_codex_api_key_account(
+pub async fn update_codex_api_key_account(
     account_id: String,
     api_key: String,
     api_base_url: Option<String>,
     display_name: Option<String>,
 ) -> AppResult<CodexAccountView> {
-    account_service::update_api_key_account(&account_id, api_key, api_base_url, display_name)
+    account_service::update_api_key_account(&account_id, api_key, api_base_url, display_name).await
 }
 
 #[tauri::command]
-pub fn update_codex_api_key_bound_oauth_account(
+pub async fn update_codex_api_key_bound_oauth_account(
     account_id: String,
     bound_oauth_account_id: Option<String>,
 ) -> AppResult<CodexAccountView> {
-    account_service::update_api_key_bound_oauth_account(&account_id, bound_oauth_account_id)
+    account_service::update_api_key_bound_oauth_account(&account_id, bound_oauth_account_id).await
 }
 
 #[tauri::command]

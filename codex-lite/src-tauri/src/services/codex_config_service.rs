@@ -21,7 +21,11 @@ pub fn account_target_provider(account: &CodexAccount) -> String {
     }
 }
 
-pub fn apply_account_config(account: &CodexAccount, config_path: &Path) -> AppResult<()> {
+pub fn apply_account_config_with_provider_base_url(
+    account: &CodexAccount,
+    config_path: &Path,
+    provider_base_url_override: Option<&str>,
+) -> AppResult<()> {
     let content = read_optional_config(config_path)?;
     let next = match account.auth_mode {
         CodexAuthMode::ApiKey => {
@@ -32,6 +36,11 @@ pub fn apply_account_config(account: &CodexAccount, config_path: &Path) -> AppRe
                 .filter(|value| !value.is_empty())
                 .map(normalize_base_url)
                 .unwrap_or_else(|| DEFAULT_OPENAI_BASE_URL.to_string());
+            let provider_base_url = provider_base_url_override
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(normalize_base_url)
+                .unwrap_or(base_url);
             let api_key = account
                 .api_key
                 .as_deref()
@@ -44,7 +53,7 @@ pub fn apply_account_config(account: &CodexAccount, config_path: &Path) -> AppRe
                         "Re-import this account before switching.",
                     )
                 })?;
-            apply_api_provider(&content, account, &base_url, api_key)
+            apply_api_provider(&content, account, &provider_base_url, api_key)
         }
         CodexAuthMode::OAuth => clear_active_provider(&content),
     };
