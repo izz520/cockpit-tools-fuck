@@ -12,6 +12,7 @@ const PROVIDER_END: &str = "# <<< codex-lite api provider end";
 pub const API_PROVIDER_ID: &str = "codex_local_access";
 pub const DEFAULT_PROVIDER_ID: &str = "openai";
 const DEFAULT_OPENAI_BASE_URL: &str = "https://api.openai.com/v1";
+const SUPPORTS_WEBSOCKETS_KEY: &str = "supports_websockets";
 
 pub fn account_target_provider(account: &CodexAccount) -> String {
     match account.auth_mode {
@@ -118,11 +119,12 @@ fn clear_active_provider(content: &str) -> String {
     let cleaned_content = remove_orphan_marker_lines(&without_api_table);
     let (prelude, rest) = split_prelude(&cleaned_content);
     let (prelude_without_model_provider, _) = remove_top_level_model_provider(prelude);
-    format!(
-        "{}{}",
-        prelude_without_model_provider,
-        ensure_leading_newline(rest)
-    )
+    let oauth_prelude = set_top_level_bool(
+        &prelude_without_model_provider,
+        SUPPORTS_WEBSOCKETS_KEY,
+        false,
+    );
+    format!("{}{}", oauth_prelude, ensure_leading_newline(rest))
 }
 
 fn build_active_provider_block(previous_model_provider: Option<&str>) -> String {
@@ -189,6 +191,24 @@ fn remove_top_level_model_provider(prelude: &str) -> (String, Option<String>) {
         .join("\n");
 
     (ensure_trailing_newline(&lines), previous)
+}
+
+fn set_top_level_bool(prelude: &str, key: &str, value: bool) -> String {
+    let assignment = format!("{key} = {value}");
+    let lines = prelude
+        .lines()
+        .filter(|line| {
+            let trimmed = line.trim_start();
+            !trimmed
+                .split_once('=')
+                .is_some_and(|(candidate, _)| candidate.trim() == key)
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let mut next = ensure_trailing_newline(&lines);
+    next.push_str(&assignment);
+    next.push('\n');
+    next
 }
 
 fn read_previous_model_provider(content: &str) -> Option<String> {
@@ -360,6 +380,20 @@ mod tests {
 
         assert!(!output.contains("model_provider = \"aimami\""));
         assert!(!output.contains("codex_local_access"));
+        assert!(output.contains("supports_websockets = false"));
+    }
+
+    #[test]
+    fn clear_active_provider_sets_oauth_supports_websockets_false_once() {
+        let input =
+            "supports_websockets = true\nmodel = \"gpt-5.5\"\n[features]\nweb_search = true\n";
+
+        let output = clear_active_provider(input);
+
+        assert!(!output.contains("supports_websockets = true"));
+        assert_eq!(output.matches("supports_websockets = false").count(), 1);
+        assert!(output.contains("model = \"gpt-5.5\""));
+        assert!(output.contains("[features]"));
     }
 
     #[test]
