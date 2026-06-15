@@ -17,3 +17,13 @@ export interface SessionMutationResult {
   updatedCount: number;
   deletedCount: number;
 }
+
+export interface SessionRepairSummary {
+  repaired: boolean;
+  instanceCount: number;
+  rolloutFileCount: number;
+  sqliteRowCount: number;
+  indexEntryCount: number;
+  backupPath?: string | null;
+  targetProvider?: string | null;
+}

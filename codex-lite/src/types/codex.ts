@@ -1,4 +1,5 @@
 import type { AppError } from './system';
+import type { SessionRepairSummary } from './session';
 
 export type CodexAuthMode = 'oauth' | 'o_auth' | 'api_key';
 
@@ -41,4 +42,6 @@ export interface SwitchResult {
   account: CodexAccountView;
   backupPath?: string | null;
   restored: boolean;
+  warnings: string[];
+  sessionRepair?: SessionRepairSummary | null;
 }

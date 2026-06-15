@@ -54,6 +54,8 @@ pub struct CodexAuthTokens {
 #[derive(Debug, Clone, Deserialize)]
 pub struct JwtPayload {
     #[serde(default)]
+    pub exp: Option<i64>,
+    #[serde(default)]
     pub email: Option<String>,
     #[serde(default)]
     pub sub: Option<String>,

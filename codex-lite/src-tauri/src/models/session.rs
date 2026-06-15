@@ -23,3 +23,15 @@ pub struct SessionMutationResult {
     pub updated_count: usize,
     pub deleted_count: usize,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionRepairSummary {
+    pub repaired: bool,
+    pub instance_count: usize,
+    pub rollout_file_count: usize,
+    pub sqlite_row_count: usize,
+    pub index_entry_count: usize,
+    pub backup_path: Option<String>,
+    pub target_provider: Option<String>,
+}

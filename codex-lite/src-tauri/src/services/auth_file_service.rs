@@ -392,7 +392,7 @@ fn api_key_account(api_key: String, base_url: Option<String>) -> CodexAccount {
     }
 }
 
-fn decode_jwt_payload(id_token: &str) -> AppResult<JwtPayload> {
+pub fn decode_jwt_payload(id_token: &str) -> AppResult<JwtPayload> {
     let payload = id_token.split('.').nth(1).ok_or_else(|| {
         AppError::new(
             "CODEX_TOKEN_INVALID",

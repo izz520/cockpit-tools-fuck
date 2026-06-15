@@ -36,6 +36,6 @@ pub fn update_codex_api_key_bound_oauth_account(
 }
 
 #[tauri::command]
-pub fn switch_codex_account(account_id: String) -> AppResult<SwitchResult> {
-    switch_service::switch_account(account_id)
+pub async fn switch_codex_account(account_id: String) -> AppResult<SwitchResult> {
+    switch_service::switch_account(account_id).await
 }

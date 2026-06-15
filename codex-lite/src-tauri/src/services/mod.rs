@@ -2,6 +2,7 @@ pub mod account_service;
 pub mod auth_file_service;
 pub mod codex_app_service;
 pub mod codex_config_service;
+pub mod codex_official_app_server_service;
 pub mod codex_session_visibility_service;
 pub mod import_service;
 pub mod oauth_service;

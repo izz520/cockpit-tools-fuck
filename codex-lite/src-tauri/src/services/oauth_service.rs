@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::infra::{atomic_write, paths};
-use crate::models::account::CodexAccountView;
+use crate::models::account::{CodexAccount, CodexAccountView, CodexAuthMode, TokenBundle};
 use crate::models::auth::{CodexAuthFile, CodexAuthTokens};
 use crate::models::error::{AppError, AppResult};
 use crate::services::{account_service, auth_file_service};
@@ -69,6 +69,8 @@ struct TokenResponse {
     #[serde(default)]
     refresh_token: Option<String>,
 }
+
+const ACCESS_TOKEN_REFRESH_SKEW_SECONDS: i64 = 120;
 
 fn now_timestamp() -> i64 {
     chrono::Utc::now().timestamp()
@@ -562,6 +564,178 @@ fn token_exchange_error_message(
     }
 
     message
+}
+
+fn token_refresh_error_message(
+    status_code: u16,
+    body_len: usize,
+    token_error: Option<&serde_json::Value>,
+) -> String {
+    let mut message = format!(
+        "OAuth token refresh failed with HTTP {} and body length {}.",
+        status_code, body_len
+    );
+
+    if let Some(error_code) = token_error
+        .and_then(|value| value.get("error"))
+        .and_then(serde_json::Value::as_str)
+    {
+        message.push_str(&format!(" error={}.", error_code));
+    }
+
+    message
+}
+
+fn access_token_needs_refresh(access_token: &str) -> bool {
+    auth_file_service::decode_jwt_payload(access_token)
+        .ok()
+        .and_then(|payload| payload.exp)
+        .is_none_or(|expires_at| expires_at <= now_timestamp() + ACCESS_TOKEN_REFRESH_SKEW_SECONDS)
+}
+
+fn refreshed_account_from_token_response(
+    account: &CodexAccount,
+    response: TokenResponse,
+) -> CodexAccount {
+    let mut refreshed = account.clone();
+    let refresh_token = response
+        .refresh_token
+        .or_else(|| account.token_bundle.as_ref()?.refresh_token.clone());
+    refreshed.token_bundle = Some(TokenBundle {
+        id_token: response.id_token,
+        access_token: response.access_token,
+        refresh_token,
+    });
+    refreshed.quota_error = None;
+    refreshed.updated_at = now_timestamp();
+
+    let auth = auth_file_service::auth_file_from_account(&refreshed);
+    if let Ok(auth) = auth {
+        if let Ok(parsed) = auth_file_service::account_from_auth(auth) {
+            refreshed.email = parsed.email;
+            refreshed.account_id = parsed.account_id;
+            refreshed.user_id = parsed.user_id;
+            refreshed.plan_type = parsed.plan_type;
+            if refreshed.display_name == "Codex OAuth Account" {
+                refreshed.display_name = parsed.display_name;
+            }
+        }
+    }
+
+    refreshed
+}
+
+async fn refresh_token_bundle(account: &CodexAccount) -> AppResult<CodexAccount> {
+    if account.auth_mode != CodexAuthMode::OAuth {
+        return Err(AppError::new(
+            "CODEX_ACCOUNT_NOT_OAUTH",
+            "Only OAuth accounts can refresh OAuth tokens.",
+            "Choose an OAuth account and try again.",
+        ));
+    }
+    let tokens = account.token_bundle.as_ref().ok_or_else(|| {
+        AppError::new(
+            "CODEX_ACCOUNT_MISSING_CREDENTIALS",
+            "Selected OAuth account has no token bundle.",
+            "Re-import this account before switching.",
+        )
+    })?;
+    let refresh_token = tokens
+        .refresh_token
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| {
+            AppError::new(
+                "CODEX_OAUTH_REFRESH_TOKEN_MISSING",
+                "OAuth account has no refresh token.",
+                "Re-authenticate this account before switching.",
+            )
+        })?;
+
+    let params = [
+        ("grant_type", "refresh_token"),
+        ("refresh_token", refresh_token),
+        ("client_id", CLIENT_ID),
+    ];
+    let response = reqwest::Client::new()
+        .post(TOKEN_ENDPOINT)
+        .form(&params)
+        .send()
+        .await
+        .map_err(|err| {
+            AppError::new(
+                "CODEX_OAUTH_REFRESH_REQUEST_FAILED",
+                format!("OAuth token refresh request failed: {}", err),
+                "Check network connectivity and try again.",
+            )
+            .retryable()
+        })?;
+    let status = response.status();
+    let body = response.text().await.map_err(|err| {
+        AppError::new(
+            "CODEX_OAUTH_REFRESH_RESPONSE_READ_FAILED",
+            format!("Failed to read OAuth refresh response: {}", err),
+            "Try switching again.",
+        )
+        .retryable()
+    })?;
+
+    if !status.is_success() {
+        let token_error = parse_token_error(&body);
+        let mut error = AppError::new(
+            "CODEX_OAUTH_REFRESH_FAILED",
+            token_refresh_error_message(status.as_u16(), body.len(), token_error.as_ref()),
+            "Re-authenticate this account, then switch again.",
+        );
+        error.details = token_error;
+        return Err(error);
+    }
+
+    let token_response = serde_json::from_str(&body).map_err(|err| {
+        AppError::new(
+            "CODEX_OAUTH_REFRESH_RESPONSE_INVALID",
+            format!("OAuth refresh response is invalid: {}", err),
+            "Re-authenticate this account, then switch again.",
+        )
+    })?;
+    Ok(refreshed_account_from_token_response(
+        account,
+        token_response,
+    ))
+}
+
+pub async fn refresh_account_if_needed(
+    account: &CodexAccount,
+    force: bool,
+) -> AppResult<CodexAccount> {
+    if account.auth_mode != CodexAuthMode::OAuth {
+        return Ok(account.clone());
+    }
+    let access_token = account
+        .token_bundle
+        .as_ref()
+        .map(|bundle| bundle.access_token.as_str())
+        .ok_or_else(|| {
+            AppError::new(
+                "CODEX_ACCOUNT_MISSING_CREDENTIALS",
+                "Selected OAuth account has no token bundle.",
+                "Re-import this account before switching.",
+            )
+        })?;
+
+    #[cfg(test)]
+    if access_token.starts_with("fixture-") {
+        return Ok(account.clone());
+    }
+
+    if !force && !access_token_needs_refresh(access_token) {
+        return Ok(account.clone());
+    }
+
+    let refreshed = refresh_token_bundle(account).await?;
+    account_service::upsert_account(refreshed.clone())?;
+    Ok(refreshed)
 }
 
 pub async fn complete_login(login_id: String) -> AppResult<CodexAccountView> {

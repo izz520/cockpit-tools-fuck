@@ -23,6 +23,7 @@ interface CodexAccountsState {
   deletingAccountId: string | null;
   updatingAccountId: string | null;
   error: AppError | null;
+  lastSwitchNotice: string | null;
   loadAccounts: () => Promise<void>;
   selectAccount: (accountId: string) => void;
   refreshAccountQuota: (accountId: string) => Promise<void>;
@@ -66,6 +67,7 @@ export const useCodexAccountsStore = create<CodexAccountsState>((set, get) => ({
   deletingAccountId: null,
   updatingAccountId: null,
   error: null,
+  lastSwitchNotice: null,
   async loadAccounts() {
     set({ loading: true, error: null });
     try {
@@ -143,7 +145,7 @@ export const useCodexAccountsStore = create<CodexAccountsState>((set, get) => ({
     }
   },
   async switchToAccount(accountId) {
-    set({ switchingAccountId: accountId, error: null });
+    set({ switchingAccountId: accountId, error: null, lastSwitchNotice: null });
     try {
       const result = await switchCodexAccount(accountId);
       set((state) => {
@@ -151,11 +153,17 @@ export const useCodexAccountsStore = create<CodexAccountsState>((set, get) => ({
           ...account,
           isCurrent: account.id === result.account.id,
         }));
+        const repair = result.sessionRepair;
+        const repairedText =
+          repair && repair.repaired
+            ? `会话可见性已修复：${repair.rolloutFileCount} 个 rollout、${repair.sqliteRowCount} 条 SQLite 记录、${repair.indexEntryCount} 条索引。`
+            : null;
         return {
           accounts: mergeAccount(accounts, result.account),
           currentAccountId: result.account.id,
           selectedAccountId: result.account.id,
           switchingAccountId: null,
+          lastSwitchNotice: [...result.warnings, repairedText].filter(Boolean).join(' '),
         };
       });
     } catch (error) {

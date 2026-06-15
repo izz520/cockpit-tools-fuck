@@ -36,6 +36,7 @@ export function AccountsPage({ onOpenSessions }: AccountsPageProps) {
     switchingAccountId,
     deletingAccountId,
     updatingAccountId,
+    lastSwitchNotice,
     loadAccounts,
     refreshAccountQuota,
     refreshAllQuotas,
@@ -93,6 +94,7 @@ export function AccountsPage({ onOpenSessions }: AccountsPageProps) {
 
   async function confirmSwitch(accountId: string) {
     await switchToAccount(accountId);
+    await loadSessions();
     setPendingSwitchAccountId(null);
   }
 
@@ -116,6 +118,7 @@ export function AccountsPage({ onOpenSessions }: AccountsPageProps) {
       <div className="content accounts-content">
         <section className="accounts-dashboard">
           {error ? <ErrorBanner error={error} /> : null}
+          {lastSwitchNotice ? <div className="account-switch-notice">{lastSwitchNotice}</div> : null}
           <div className="accounts-panel-header">
             <div>
               <h2 className="accounts-title">账号管理</h2>

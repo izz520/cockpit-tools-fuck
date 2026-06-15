@@ -22,6 +22,17 @@
   max-width: 760px;
 }
 
+.account-switch-notice {
+  padding: 10px 12px;
+  border: 1px solid oklch(0.82 0.08 155);
+  border-radius: var(--radius-control);
+  background: oklch(0.96 0.045 155);
+  color: oklch(0.32 0.09 155);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
 .accounts-title {
   margin: 0 0 6px;
   color: var(--color-text-strong);

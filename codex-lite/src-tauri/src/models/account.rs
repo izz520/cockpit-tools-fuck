@@ -1,4 +1,5 @@
 use crate::models::error::AppError;
+use crate::models::session::SessionRepairSummary;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -91,6 +92,8 @@ pub struct SwitchResult {
     pub account: CodexAccountView,
     pub backup_path: Option<String>,
     pub restored: bool,
+    pub warnings: Vec<String>,
+    pub session_repair: Option<SessionRepairSummary>,
 }
 
 impl CodexAccount {
