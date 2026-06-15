@@ -15,7 +15,9 @@ use crate::models::session::{CodexSessionView, SessionMutationResult, SessionRep
 use crate::services::{codex_app_service, codex_config_service, codex_official_app_server_service};
 
 const STATE_DB_FILE: &str = "state_5.sqlite";
+const SQLITE_STATE_DB_FILE: &str = "sqlite/state_5.sqlite";
 const SESSION_INDEX_FILE: &str = "session_index.jsonl";
+const GLOBAL_STATE_FILE: &str = ".codex-global-state.json";
 const SESSION_DIRS: [&str; 2] = ["sessions", "archived_sessions"];
 
 #[derive(Debug, Clone)]
@@ -55,6 +57,12 @@ struct SqliteThreadIndexRow {
     id: String,
     title: String,
     updated_at: Option<i64>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct GlobalStateRepairStatus {
+    needs_repair: bool,
+    exists: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -222,6 +230,9 @@ fn restore_sessions_visibility(
         }
     }
     updated_count += reconcile_session_index_from_sqlite(codex_home, Some(&selected_ids))?;
+    if repair_codex_global_state(codex_home)? {
+        updated_count += 1;
+    }
 
     Ok(SessionMutationResult {
         updated_count,
@@ -276,8 +287,13 @@ fn repair_codex_home_for_provider(
     let rollout_paths = collect_rollout_provider_changes(&metas, target_provider);
     let sqlite_rows_to_update = count_sqlite_rows_to_update(codex_home, target_provider)?;
     let index_entries_to_update = count_session_index_entries_to_reconcile(codex_home, None)?;
+    let global_state_status = global_state_repair_status(codex_home)?;
 
-    if rollout_paths.is_empty() && sqlite_rows_to_update == 0 && index_entries_to_update == 0 {
+    if rollout_paths.is_empty()
+        && sqlite_rows_to_update == 0
+        && index_entries_to_update == 0
+        && !global_state_status.needs_repair
+    {
         return Ok(SessionRepairSummary {
             repaired: false,
             instance_count: 1,
@@ -295,6 +311,7 @@ fn repair_codex_home_for_provider(
         &rollout_paths,
         sqlite_rows_to_update > 0 || index_entries_to_update > 0,
         index_entries_to_update > 0,
+        global_state_status.exists && global_state_status.needs_repair,
     )?;
     let backup_path = Some(backup.path.display().to_string());
     let repair_result = (|| {
@@ -307,8 +324,12 @@ fn repair_codex_home_for_provider(
 
         let sqlite_row_count = update_sqlite_threads_provider(codex_home, target_provider)?;
         let index_entry_count = reconcile_session_index_from_sqlite(codex_home, None)?;
+        let global_state_repaired = repair_codex_global_state(codex_home)?;
         Ok(SessionRepairSummary {
-            repaired: rollout_file_count > 0 || sqlite_row_count > 0 || index_entry_count > 0,
+            repaired: rollout_file_count > 0
+                || sqlite_row_count > 0
+                || index_entry_count > 0
+                || global_state_repaired,
             instance_count: 1,
             rollout_file_count,
             sqlite_row_count,
@@ -344,6 +365,7 @@ fn create_session_repair_backup(
     rollout_paths: &[PathBuf],
     include_sqlite: bool,
     include_session_index: bool,
+    include_global_state: bool,
 ) -> AppResult<SessionRepairBackup> {
     fs::create_dir_all(codex_home).map_err(|err| {
         AppError::new(
@@ -367,18 +389,23 @@ fn create_session_repair_backup(
 
     let mut files = Vec::new();
     if include_sqlite {
-        track_backup_file(
-            codex_home,
-            &backup_dir,
-            &PathBuf::from(STATE_DB_FILE),
-            &mut files,
-        )?;
+        for relative in state_db_relative_paths() {
+            track_backup_file(codex_home, &backup_dir, &relative, &mut files)?;
+        }
     }
     if include_session_index {
         track_backup_file(
             codex_home,
             &backup_dir,
             &PathBuf::from(SESSION_INDEX_FILE),
+            &mut files,
+        )?;
+    }
+    if include_global_state {
+        track_backup_file(
+            codex_home,
+            &backup_dir,
+            &PathBuf::from(GLOBAL_STATE_FILE),
             &mut files,
         )?;
     }
@@ -454,7 +481,7 @@ fn track_backup_file(
         return Ok(());
     }
 
-    if relative == Path::new(STATE_DB_FILE) {
+    if is_state_db_relative_path(relative) {
         backup_sqlite_database(&source, &backup_dir.join(relative))
     } else {
         copy_backup_file(backup_dir, relative, &source)
@@ -828,12 +855,41 @@ fn restore_modified_time(_path: &Path, _modified_at: Option<SystemTime>) -> AppR
     Ok(())
 }
 
-fn update_sqlite_threads_provider(codex_home: &Path, target_provider: &str) -> AppResult<usize> {
-    let db_path = codex_home.join(STATE_DB_FILE);
-    if !db_path.exists() {
-        return Ok(0);
-    }
+fn state_db_relative_paths() -> Vec<PathBuf> {
+    vec![
+        PathBuf::from(STATE_DB_FILE),
+        PathBuf::from(SQLITE_STATE_DB_FILE),
+    ]
+}
 
+fn is_state_db_relative_path(relative: &Path) -> bool {
+    relative == Path::new(STATE_DB_FILE) || relative == Path::new(SQLITE_STATE_DB_FILE)
+}
+
+fn existing_state_db_paths(codex_home: &Path) -> Vec<PathBuf> {
+    let mut paths = Vec::new();
+    let mut seen = HashSet::new();
+    for relative in state_db_relative_paths() {
+        let path = codex_home.join(relative);
+        if path.exists() && seen.insert(path.clone()) {
+            paths.push(path);
+        }
+    }
+    paths
+}
+
+fn update_sqlite_threads_provider(codex_home: &Path, target_provider: &str) -> AppResult<usize> {
+    let mut updated = 0usize;
+    for db_path in existing_state_db_paths(codex_home) {
+        updated += update_sqlite_threads_provider_at_path(&db_path, target_provider)?;
+    }
+    Ok(updated)
+}
+
+fn update_sqlite_threads_provider_at_path(
+    db_path: &Path,
+    target_provider: &str,
+) -> AppResult<usize> {
     let mut connection = Connection::open(&db_path).map_err(|err| {
         AppError::new(
             "CODEX_STATE_DB_OPEN_FAILED",
@@ -911,30 +967,36 @@ fn update_sqlite_threads_provider(codex_home: &Path, target_provider: &str) -> A
 }
 
 fn count_sqlite_rows_to_update(codex_home: &Path, target_provider: &str) -> AppResult<usize> {
-    let Some(connection) = open_state_connection(codex_home)? else {
-        return Ok(0);
-    };
-    let columns = read_threads_table_columns(&connection)?;
-    let Some(columns) = columns else {
-        return Ok(0);
-    };
-    let Some(where_clause) = build_threads_repair_where_clause(columns, None) else {
-        return Ok(0);
-    };
-    let sql = format!("SELECT COUNT(*) FROM threads WHERE {where_clause}");
-    let count: i64 = if statement_uses_target_provider(&sql) {
-        connection.query_row(sql.as_str(), [target_provider], |row| row.get(0))
-    } else {
-        connection.query_row(sql.as_str(), [], |row| row.get(0))
+    let mut total = 0usize;
+    for db_path in existing_state_db_paths(codex_home) {
+        let connection = open_state_connection_at_path(&db_path)?;
+        let columns = read_threads_table_columns(&connection)?;
+        let Some(columns) = columns else {
+            continue;
+        };
+        let Some(where_clause) = build_threads_repair_where_clause(columns, None) else {
+            continue;
+        };
+        let sql = format!("SELECT COUNT(*) FROM threads WHERE {where_clause}");
+        let count: i64 = if statement_uses_target_provider(&sql) {
+            connection.query_row(sql.as_str(), [target_provider], |row| row.get(0))
+        } else {
+            connection.query_row(sql.as_str(), [], |row| row.get(0))
+        }
+        .map_err(|err| {
+            AppError::new(
+                "CODEX_STATE_DB_QUERY_FAILED",
+                format!(
+                    "Failed to count Codex thread rows to repair in {}: {}",
+                    db_path.display(),
+                    err
+                ),
+                "Close Codex and try again.",
+            )
+        })?;
+        total += count.max(0) as usize;
     }
-    .map_err(|err| {
-        AppError::new(
-            "CODEX_STATE_DB_QUERY_FAILED",
-            format!("Failed to count Codex thread rows to repair: {}", err),
-            "Close Codex and try again.",
-        )
-    })?;
-    Ok(count.max(0) as usize)
+    Ok(total)
 }
 
 fn statement_uses_target_provider(sql: &str) -> bool {
@@ -1036,11 +1098,7 @@ fn build_threads_repair_set_clause(columns: ThreadsTableColumns) -> String {
     assignments.join(", ")
 }
 
-fn open_state_connection(codex_home: &Path) -> AppResult<Option<Connection>> {
-    let db_path = codex_home.join(STATE_DB_FILE);
-    if !db_path.exists() {
-        return Ok(None);
-    }
+fn open_state_connection_at_path(db_path: &Path) -> AppResult<Connection> {
     let connection = Connection::open(&db_path).map_err(|err| {
         AppError::new(
             "CODEX_STATE_DB_OPEN_FAILED",
@@ -1065,13 +1123,28 @@ fn open_state_connection(codex_home: &Path) -> AppResult<Option<Connection>> {
                 "Close Codex and try again.",
             )
         })?;
-    Ok(Some(connection))
+    Ok(connection)
 }
 
 fn read_sqlite_session_rows(codex_home: &Path) -> AppResult<Vec<SqliteSessionRow>> {
-    let Some(connection) = open_state_connection(codex_home)? else {
-        return Ok(Vec::new());
-    };
+    let mut by_id = BTreeMap::<String, SqliteSessionRow>::new();
+    for db_path in existing_state_db_paths(codex_home) {
+        for row in read_sqlite_session_rows_at_path(&db_path)? {
+            by_id
+                .entry(row.id.clone())
+                .and_modify(|existing| {
+                    if row.updated_at.unwrap_or(0) >= existing.updated_at.unwrap_or(0) {
+                        *existing = row.clone();
+                    }
+                })
+                .or_insert(row);
+        }
+    }
+    Ok(by_id.into_values().collect())
+}
+
+fn read_sqlite_session_rows_at_path(db_path: &Path) -> AppResult<Vec<SqliteSessionRow>> {
+    let connection = open_state_connection_at_path(db_path)?;
     let columns = read_threads_columns(&connection)?;
     if columns.is_empty() || !columns.contains("id") {
         return Ok(Vec::new());
@@ -1166,9 +1239,24 @@ fn read_sqlite_session_rows(codex_home: &Path) -> AppResult<Vec<SqliteSessionRow
 }
 
 fn load_sqlite_thread_index_rows(codex_home: &Path) -> AppResult<Vec<SqliteThreadIndexRow>> {
-    let Some(connection) = open_state_connection(codex_home)? else {
-        return Ok(Vec::new());
-    };
+    let mut by_id = BTreeMap::<String, SqliteThreadIndexRow>::new();
+    for db_path in existing_state_db_paths(codex_home) {
+        for row in load_sqlite_thread_index_rows_at_path(&db_path)? {
+            by_id
+                .entry(row.id.clone())
+                .and_modify(|existing| {
+                    if row.updated_at.unwrap_or(0) >= existing.updated_at.unwrap_or(0) {
+                        *existing = row.clone();
+                    }
+                })
+                .or_insert(row);
+        }
+    }
+    Ok(by_id.into_values().collect())
+}
+
+fn load_sqlite_thread_index_rows_at_path(db_path: &Path) -> AppResult<Vec<SqliteThreadIndexRow>> {
+    let connection = open_state_connection_at_path(db_path)?;
     let columns = read_threads_columns(&connection)?;
     if !columns.contains("id") {
         return Ok(Vec::new());
@@ -1228,9 +1316,23 @@ fn update_sqlite_selected_threads_provider(
     target_provider: &str,
     selected_ids: &HashSet<String>,
 ) -> AppResult<usize> {
-    let Some(mut connection) = open_state_connection(codex_home)? else {
-        return Ok(0);
-    };
+    let mut updated = 0usize;
+    for db_path in existing_state_db_paths(codex_home) {
+        updated += update_sqlite_selected_threads_provider_at_path(
+            &db_path,
+            target_provider,
+            selected_ids,
+        )?;
+    }
+    Ok(updated)
+}
+
+fn update_sqlite_selected_threads_provider_at_path(
+    db_path: &Path,
+    target_provider: &str,
+    selected_ids: &HashSet<String>,
+) -> AppResult<usize> {
+    let mut connection = open_state_connection_at_path(db_path)?;
     let columns = read_threads_columns(&connection)?;
     if !columns.contains("id") {
         return Ok(0);
@@ -1261,8 +1363,10 @@ fn update_sqlite_selected_threads_provider(
                 AppError::new(
                     "CODEX_STATE_DB_WRITE_FAILED",
                     format!(
-                        "Failed to restore Codex session visibility for {}: {}",
-                        id, err
+                        "Failed to restore Codex session visibility for {} in {}: {}",
+                        id,
+                        db_path.display(),
+                        err
                     ),
                     "Close Codex and try again.",
                 )
@@ -1282,9 +1386,18 @@ fn update_sqlite_selected_threads_provider(
 }
 
 fn delete_sqlite_sessions(codex_home: &Path, selected_ids: &HashSet<String>) -> AppResult<usize> {
-    let Some(mut connection) = open_state_connection(codex_home)? else {
-        return Ok(0);
-    };
+    let mut deleted = 0usize;
+    for db_path in existing_state_db_paths(codex_home) {
+        deleted += delete_sqlite_sessions_at_path(&db_path, selected_ids)?;
+    }
+    Ok(deleted)
+}
+
+fn delete_sqlite_sessions_at_path(
+    db_path: &Path,
+    selected_ids: &HashSet<String>,
+) -> AppResult<usize> {
+    let mut connection = open_state_connection_at_path(db_path)?;
     let columns = read_threads_columns(&connection)?;
     if !columns.contains("id") {
         return Ok(0);
@@ -1304,8 +1417,10 @@ fn delete_sqlite_sessions(codex_home: &Path, selected_ids: &HashSet<String>) -> 
                 AppError::new(
                     "CODEX_STATE_DB_WRITE_FAILED",
                     format!(
-                        "Failed to delete Codex session {} from state database: {}",
-                        id, err
+                        "Failed to delete Codex session {} from state database {}: {}",
+                        id,
+                        db_path.display(),
+                        err
                     ),
                     "Close Codex and try again.",
                 )
@@ -1556,6 +1671,143 @@ fn build_session_index_line_from_thread(row: &SqliteThreadIndexRow) -> AppResult
     })
 }
 
+fn global_state_repair_status(codex_home: &Path) -> AppResult<GlobalStateRepairStatus> {
+    let global_state_path = codex_home.join(GLOBAL_STATE_FILE);
+    if !global_state_path.exists() {
+        return Ok(GlobalStateRepairStatus {
+            needs_repair: false,
+            exists: false,
+        });
+    }
+    let Some(project_roots) = project_roots_from_sessions(codex_home)? else {
+        return Ok(GlobalStateRepairStatus {
+            needs_repair: false,
+            exists: true,
+        });
+    };
+    let content = fs::read_to_string(&global_state_path).map_err(|err| {
+        AppError::new(
+            "CODEX_GLOBAL_STATE_READ_FAILED",
+            format!("Failed to read {}: {}", global_state_path.display(), err),
+            "Close Codex and try again.",
+        )
+    })?;
+    let state: JsonValue = serde_json::from_str(&content).map_err(|err| {
+        AppError::new(
+            "CODEX_GLOBAL_STATE_PARSE_FAILED",
+            format!("Failed to parse {}: {}", global_state_path.display(), err),
+            "Check the Codex global state format.",
+        )
+    })?;
+    Ok(GlobalStateRepairStatus {
+        needs_repair: !global_state_has_project_roots(&state, &project_roots),
+        exists: true,
+    })
+}
+
+fn repair_codex_global_state(codex_home: &Path) -> AppResult<bool> {
+    let global_state_path = codex_home.join(GLOBAL_STATE_FILE);
+    if !global_state_path.exists() {
+        return Ok(false);
+    }
+    let Some(project_roots) = project_roots_from_sessions(codex_home)? else {
+        return Ok(false);
+    };
+    let content = fs::read_to_string(&global_state_path).map_err(|err| {
+        AppError::new(
+            "CODEX_GLOBAL_STATE_READ_FAILED",
+            format!("Failed to read {}: {}", global_state_path.display(), err),
+            "Close Codex and try again.",
+        )
+    })?;
+    let mut state: JsonValue = serde_json::from_str(&content).map_err(|err| {
+        AppError::new(
+            "CODEX_GLOBAL_STATE_PARSE_FAILED",
+            format!("Failed to parse {}: {}", global_state_path.display(), err),
+            "Check the Codex global state format.",
+        )
+    })?;
+    if global_state_has_project_roots(&state, &project_roots) {
+        return Ok(false);
+    }
+    ensure_string_array_contains(&mut state, "active-workspace-roots", &project_roots);
+    ensure_string_array_contains(&mut state, "electron-saved-workspace-roots", &project_roots);
+    ensure_string_array_contains(&mut state, "project-order", &project_roots);
+    let next = serde_json::to_vec(&state).map_err(|err| {
+        AppError::new(
+            "CODEX_GLOBAL_STATE_SERIALIZE_FAILED",
+            format!("Failed to serialize Codex global state: {}", err),
+            "Check the Codex global state format.",
+        )
+    })?;
+    atomic_write::write_atomic(&global_state_path, &next)?;
+    Ok(true)
+}
+
+fn global_state_has_project_roots(state: &JsonValue, project_roots: &[String]) -> bool {
+    project_roots.iter().all(|root| {
+        json_array_contains_string(state, "active-workspace-roots", root)
+            && json_array_contains_string(state, "electron-saved-workspace-roots", root)
+            && json_array_contains_string(state, "project-order", root)
+    })
+}
+
+fn json_array_contains_string(state: &JsonValue, key: &str, value: &str) -> bool {
+    state
+        .get(key)
+        .and_then(JsonValue::as_array)
+        .is_some_and(|items| items.iter().any(|item| item.as_str() == Some(value)))
+}
+
+fn ensure_string_array_contains(state: &mut JsonValue, key: &str, values: &[String]) {
+    let Some(object) = state.as_object_mut() else {
+        return;
+    };
+    let entry = object
+        .entry(key.to_string())
+        .or_insert_with(|| JsonValue::Array(Vec::new()));
+    if !entry.is_array() {
+        *entry = JsonValue::Array(Vec::new());
+    }
+    let Some(items) = entry.as_array_mut() else {
+        return;
+    };
+    for value in values.iter().rev() {
+        if items.iter().any(|item| item.as_str() == Some(value)) {
+            continue;
+        }
+        items.insert(0, JsonValue::String(value.clone()));
+    }
+}
+
+fn project_roots_from_sessions(codex_home: &Path) -> AppResult<Option<Vec<String>>> {
+    let mut roots = Vec::<String>::new();
+    for row in read_sqlite_session_rows(codex_home)? {
+        add_project_root_candidate(&mut roots, &row.cwd);
+    }
+    for meta in read_rollout_session_metas(codex_home)? {
+        if let Some(cwd) = meta.cwd.as_deref() {
+            add_project_root_candidate(&mut roots, cwd);
+        }
+    }
+    if roots.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(roots))
+    }
+}
+
+fn add_project_root_candidate(roots: &mut Vec<String>, cwd: &str) {
+    let trimmed = cwd.trim();
+    if trimmed.is_empty() || trimmed.starts_with("/Users/") && trimmed.contains("/Documents/Codex/")
+    {
+        return;
+    }
+    if !roots.iter().any(|existing| existing == trimmed) {
+        roots.push(trimmed.to_string());
+    }
+}
+
 fn normalized_thread_title(row: &SqliteThreadIndexRow) -> String {
     let title = row.title.trim();
     if title.is_empty() {
@@ -1700,7 +1952,7 @@ fn display_title_from_id(id: &str) -> String {
 mod tests {
     use super::{
         list_codex_sessions, repair_codex_home_for_provider, update_sqlite_threads_provider,
-        SESSION_INDEX_FILE, STATE_DB_FILE,
+        SESSION_INDEX_FILE, SQLITE_STATE_DB_FILE, STATE_DB_FILE,
     };
     use rusqlite::Connection;
 
@@ -1839,6 +2091,92 @@ mod tests {
             .expect("source metadata should be read");
         assert_eq!(has_user_event, 1);
         assert_eq!(thread_source, "user");
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn repairs_both_state_database_locations() {
+        let root = temp_dir("session-dual-sqlite");
+        let top_db_path = root.join(STATE_DB_FILE);
+        let nested_db_path = root.join(SQLITE_STATE_DB_FILE);
+        std::fs::create_dir_all(nested_db_path.parent().expect("nested parent"))
+            .expect("nested sqlite dir should be created");
+
+        for db_path in [&top_db_path, &nested_db_path] {
+            let connection = Connection::open(db_path).expect("database should open");
+            connection
+                .execute(
+                    "CREATE TABLE threads (id TEXT PRIMARY KEY, model_provider TEXT, title TEXT, cwd TEXT, archived INTEGER, updated_at_ms INTEGER)",
+                    [],
+                )
+                .expect("threads table should be created");
+            connection
+                .execute(
+                    "INSERT INTO threads (id, model_provider, title, cwd, archived, updated_at_ms) VALUES ('same', 'openai', 'Same', '/repo/app', 0, 1781540000000)",
+                    [],
+                )
+                .expect("row should be inserted");
+        }
+
+        let updated = update_sqlite_threads_provider(&root, "codex_local_access")
+            .expect("update should work");
+        assert_eq!(updated, 2);
+
+        for db_path in [&top_db_path, &nested_db_path] {
+            let connection = Connection::open(db_path).expect("database should reopen");
+            let provider: String = connection
+                .query_row(
+                    "SELECT model_provider FROM threads WHERE id = 'same'",
+                    [],
+                    |row| row.get(0),
+                )
+                .expect("provider should be read");
+            assert_eq!(provider, "codex_local_access");
+        }
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn repair_restores_project_workspace_in_global_state() {
+        let root = temp_dir("session-global-state");
+        let sqlite_dir = root.join("sqlite");
+        std::fs::create_dir_all(&sqlite_dir).expect("sqlite dir should be created");
+        let db_path = sqlite_dir.join(STATE_DB_FILE);
+        let connection = Connection::open(&db_path).expect("database should open");
+        connection
+            .execute(
+                "CREATE TABLE threads (id TEXT PRIMARY KEY, model_provider TEXT, title TEXT, cwd TEXT, archived INTEGER, updated_at_ms INTEGER)",
+                [],
+            )
+            .expect("threads table should be created");
+        connection
+            .execute(
+                "INSERT INTO threads (id, model_provider, title, cwd, archived, updated_at_ms) VALUES ('project-thread', 'openai', 'Project Thread', '/Users/test/project/codex-lite', 0, 1781540000000)",
+                [],
+            )
+            .expect("row should be inserted");
+        drop(connection);
+        std::fs::write(
+            root.join(".codex-global-state.json"),
+            r#"{"active-workspace-roots":[],"electron-saved-workspace-roots":[],"project-order":[]}"#,
+        )
+        .expect("global state should be written");
+
+        let summary = repair_codex_home_for_provider(&root, "codex_local_access")
+            .expect("repair should work");
+        assert!(summary.repaired);
+        let state = std::fs::read_to_string(root.join(".codex-global-state.json"))
+            .expect("global state should be readable");
+        assert!(state.contains("\"active-workspace-roots\":[\"/Users/test/project/codex-lite\"]"));
+        assert!(state
+            .contains("\"electron-saved-workspace-roots\":[\"/Users/test/project/codex-lite\"]"));
+        assert!(state.contains("\"project-order\":[\"/Users/test/project/codex-lite\"]"));
+        let manifest_path = summary.backup_path.expect("backup path should exist");
+        let manifest =
+            std::fs::read_to_string(std::path::Path::new(&manifest_path).join("manifest.json"))
+                .expect("manifest should be readable");
+        assert!(manifest.contains("sqlite/state_5.sqlite"));
+        assert!(manifest.contains(".codex-global-state.json"));
         let _ = std::fs::remove_dir_all(root);
     }
 
