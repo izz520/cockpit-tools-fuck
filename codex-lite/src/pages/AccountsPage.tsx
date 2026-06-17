@@ -122,10 +122,10 @@ export function AccountsPage({ onOpenSessions }: AccountsPageProps) {
       {lastSwitchNotice ? <div className="account-switch-notice">{lastSwitchNotice}</div> : null}
 
       <div className="accounts-stats" aria-label="Account statistics">
-        <StatCard icon={<Users size={24} />} iconColor="primary" label="总账号" value={accounts.length} meta="个账号" />
-        <StatCard icon={<Crown size={24} />} iconColor="blue" label="OAuth 账号" value={oauthAccountCount} meta="个账号" />
-        <StatCard icon={<KeyRound size={24} />} iconColor="green" label="API Key 账号" value={apiAccountCount} meta="个账号" />
-        <StatCard icon={<History size={24} />} iconColor="purple" label="会话数" value={sessions.length} meta="条会话" />
+        <StatCard icon={<Users size={19} />} iconColor="primary" label="总账号" value={accounts.length} meta="个账号" />
+        <StatCard icon={<Crown size={19} />} iconColor="blue" label="OAuth 账号" value={oauthAccountCount} meta="个账号" />
+        <StatCard icon={<KeyRound size={19} />} iconColor="green" label="API Key 账号" value={apiAccountCount} meta="个账号" />
+        <StatCard icon={<History size={19} />} iconColor="purple" label="会话数" value={sessions.length} meta="条会话" />
       </div>
 
       <div className="accounts-toolbar" aria-label="Account controls">

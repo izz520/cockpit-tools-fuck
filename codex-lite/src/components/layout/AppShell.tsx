@@ -1,4 +1,4 @@
-import { FileText, MessageCircle, Settings, Users } from 'lucide-react';
+import { FileText, MessageCircle, Settings, SquareTerminal, Users } from 'lucide-react';
 import { type PointerEvent, type ReactNode } from 'react';
 import { startWindowDragging } from '../../services/windowService';
 
@@ -37,7 +37,9 @@ export function AppShell({ page, setPage, children }: AppShellProps) {
     <div className="app-shell">
       <nav className="app-nav" aria-label="Primary">
         <div className="app-brand">
-          <div className="app-logo">A.</div>
+          <div className="app-logo" aria-hidden="true">
+            <SquareTerminal size={19} />
+          </div>
         </div>
 
         <div className="nav-section">
@@ -47,7 +49,7 @@ export function AppShell({ page, setPage, children }: AppShellProps) {
             title="Accounts"
             onClick={() => setPage('accounts')}
           >
-            <Users size={20} />
+            <Users size={18} />
           </button>
         </div>
 
@@ -58,7 +60,7 @@ export function AppShell({ page, setPage, children }: AppShellProps) {
             title="Logs"
             onClick={() => setPage('logs')}
           >
-            <FileText size={20} />
+            <FileText size={18} />
           </button>
           <button
             className={`nav-button ${page === 'settings' ? 'active' : ''}`}
@@ -66,7 +68,7 @@ export function AppShell({ page, setPage, children }: AppShellProps) {
             title="Settings"
             onClick={() => setPage('settings')}
           >
-            <Settings size={20} />
+            <Settings size={18} />
           </button>
         </div>
       </nav>
@@ -74,7 +76,7 @@ export function AppShell({ page, setPage, children }: AppShellProps) {
         <header className="topbar" data-tauri-drag-region onPointerDown={handleTopbarPointerDown}>
           <div className="topbar-content">
             <div className="topbar-title-group">
-              <MessageCircle size={18} aria-hidden="true" />
+              <MessageCircle size={16} aria-hidden="true" />
               <h1 className="page-title">{getPageTitle()}</h1>
             </div>
           </div>

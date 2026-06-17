@@ -233,7 +233,7 @@ export function SessionsPage({ onBack }: SessionsPageProps) {
                   <button className="session-group-toggle" type="button" onClick={() => toggleGroup(group.key)}>
                     {collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                     <span className="session-group-icon">
-                      <Folder size={18} />
+                      <Folder size={16} />
                     </span>
                     <span className="session-group-title">
                       <strong>{group.project}</strong>

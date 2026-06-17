@@ -119,6 +119,11 @@
   animation: spin 800ms linear infinite;
 }
 
+.button > .lucide {
+  width: 16px;
+  height: 16px;
+}
+
 .icon-button {
   display: inline-grid;
   place-items: center;
@@ -138,6 +143,11 @@
     transform var(--transition-base),
     border-color var(--transition-base),
     box-shadow var(--transition-base);
+}
+
+.icon-button > .lucide {
+  width: 16px;
+  height: 16px;
 }
 
 .icon-button:hover:not(:disabled),

@@ -9,7 +9,7 @@ interface ErrorBannerProps {
 export function ErrorBanner({ error }: ErrorBannerProps) {
   return (
     <section className="error-banner" role="alert">
-      <AlertTriangle size={18} />
+      <AlertTriangle size={16} />
       <div>
         <strong>{error.message}</strong>
         <p>{error.action}</p>

@@ -58,9 +58,11 @@
 .account-card-main {
   flex: 1;
   display: grid;
-  align-content: start;
+  grid-template-rows: auto auto minmax(82px, 1fr) auto;
+  align-content: stretch;
   gap: 16px;
   width: 100%;
+  min-height: 0;
   padding: 20px 20px 12px;
   background: transparent;
   color: inherit;
@@ -132,11 +134,13 @@
 }
 
 .api-account-card .account-card-main {
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 12px;
 }
 
 .api-account-fields {
   display: grid;
+  align-self: start;
   overflow: hidden;
   border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-control);
@@ -169,12 +173,17 @@
   font-weight: var(--font-weight-extrabold);
 }
 
-.api-account-field-label svg {
+.api-account-field-label .lucide {
   flex: 0 0 auto;
-  padding: 3px;
-  border-radius: 7px;
-  background: var(--color-blue-soft);
   color: var(--color-blue);
+}
+
+.api-account-field-label > .lucide,
+.api-oauth-binding .lucide,
+.quota-line .lucide,
+.account-validity .lucide {
+  width: 14px;
+  height: 14px;
 }
 
 .api-account-field-actions {
@@ -234,6 +243,7 @@
 
 .api-oauth-binding {
   display: flex;
+  align-self: end;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
@@ -288,6 +298,12 @@
   white-space: nowrap;
 }
 
+.account-health-slot {
+  min-height: 82px;
+  display: grid;
+  align-items: stretch;
+}
+
 .quota-lines {
   display: grid;
   gap: 8px;
@@ -333,11 +349,11 @@
 
 .account-validity {
   display: flex;
+  align-self: end;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   min-height: 34px;
-  margin-top: 2px;
   padding: 0 12px;
   border-radius: var(--radius-control);
   background: linear-gradient(90deg, var(--color-success-soft), oklch(0.968 0.02 235));
@@ -364,9 +380,9 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  min-height: 112px;
+  min-height: 82px;
   overflow: visible;
-  padding: 14px 16px;
+  padding: 10px 12px;
   border: 1px solid oklch(0.7 0.14 27 / 0.32);
   border-radius: var(--radius-control);
   background: var(--color-error-soft);
@@ -388,8 +404,8 @@
 }
 
 .account-detail-error-actions .button {
-  height: 32px;
-  min-width: 96px;
+  height: 30px;
+  min-width: 88px;
   border-color: oklch(0.7 0.14 27 / 0.28);
   background: oklch(1 0 0 / 0.82);
   color: var(--color-error);

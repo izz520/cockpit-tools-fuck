@@ -240,6 +240,8 @@ export function ImportDrawer() {
     return null;
   }
 
+  const selectedSource = importSources.find((item) => item.id === source) ?? importSources[0];
+
   return (
     <div className="drawer-backdrop" role="presentation">
       <aside className="import-drawer" role="dialog" aria-modal="true" aria-labelledby="import-title">
@@ -248,18 +250,23 @@ export function ImportDrawer() {
             <h2 id="import-title">Add account</h2>
             <p>Add Codex accounts from local auth, JSON, tokens, or API keys.</p>
           </div>
-          <IconButton label="Close add account drawer" icon={<X size={18} />} onClick={closeDrawer} />
+          <IconButton label="Close add account drawer" icon={<X size={16} />} onClick={closeDrawer} />
         </header>
 
         <div className="drawer-body">
-          {error ? <ErrorBanner error={error} /> : null}
-
-          <section className="drawer-section source-tabs-section">
-            <h3>Account type</h3>
-            <div className="source-tabs" role="tablist" aria-label="Account source">
+          <nav className="source-panel" aria-label="Account source">
+            <div className="source-panel-heading">
+              <h3>Account type</h3>
+              <span>Choose how this account enters Codex Lite.</span>
+            </div>
+            <div className="source-tabs" role="tablist" aria-label="Account source" aria-orientation="vertical">
               {importSources.map((item) => (
                 <button
+                  aria-controls={`import-panel-${item.id}`}
+                  aria-describedby={`import-source-desc-${item.id}`}
+                  aria-label={item.label}
                   aria-selected={source === item.id}
+                  id={`import-source-tab-${item.id}`}
                   className={`source-tab ${source === item.id ? 'selected' : ''}`}
                   key={item.id}
                   role="tab"
@@ -269,182 +276,203 @@ export function ImportDrawer() {
                   <span className="source-option-icon" aria-hidden="true">
                     {item.icon}
                   </span>
-                  <strong>{item.label}</strong>
+                  <span className="source-option-copy">
+                    <strong>{item.label}</strong>
+                    <span id={`import-source-desc-${item.id}`}>{item.description}</span>
+                  </span>
                 </button>
               ))}
             </div>
-          </section>
+          </nav>
 
-          <section className="drawer-section">
-            <div className="drawer-section-title-row">
-              <h3>Details</h3>
-              <span>{importSources.find((item) => item.id === source)?.description}</span>
+          <section
+            aria-labelledby={`import-source-tab-${source}`}
+            className="import-workspace"
+            id={`import-panel-${source}`}
+            role="tabpanel"
+          >
+            {error ? <ErrorBanner error={error} /> : null}
+
+            <div className="source-summary">
+              <span className="source-summary-icon" aria-hidden="true">
+                {selectedSource.icon}
+              </span>
+              <div>
+                <h3>{selectedSource.label}</h3>
+                <p>{selectedSource.description}</p>
+              </div>
             </div>
-            {source === 'local' ? (
-              <p className="muted">Codex Lite will read your current local auth file and add it to the local account list.</p>
-            ) : null}
 
-            {source === 'jsonFile' || source === 'batchFiles' ? (
-              <div className="import-field-group">
-                <div className="file-actions">
-                  <Button variant="secondary" loading={selectingFiles} icon={<FileJson size={16} />} onClick={chooseFiles}>
-                    Choose JSON
-                  </Button>
-                  {filePaths.length > 0 ? (
-                    <Button variant="ghost" onClick={clearFiles}>
-                      Clear
-                    </Button>
-                  ) : null}
+            <div className="import-form-area">
+              {source === 'local' ? (
+                <div className="local-auth-panel">
+                  <span>Codex Lite will read your current local auth file and add it to the local account list.</span>
+                  <code>~/.codex/auth.json</code>
                 </div>
-                {filePaths.length === 0 ? (
-                  <p className="muted">Choose one or more Codex auth JSON files.</p>
-                ) : (
-                  <ul className="file-preview-list" aria-label="Selected import files">
-                    {filePaths.map((filePath) => (
-                      <li key={filePath}>
-                        <strong>{fileName(filePath)}</strong>
-                        <span>{filePath}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {previewingBatch ? <p className="muted">Preparing batch preview...</p> : null}
-              </div>
-            ) : null}
+              ) : null}
 
-            {source === 'jsonText' ? (
-              <label className="import-field">
-                <span>Auth JSON</span>
-                <textarea
-                  rows={9}
-                  spellCheck={false}
-                  value={jsonText}
-                  placeholder='{"id_token":"...","access_token":"..."} 或 [{"id_token":"..."}] 或 {"type":"sub2api-data","accounts":[...]}'
-                  onChange={(event) => setJsonText(event.target.value)}
+              {source === 'jsonFile' || source === 'batchFiles' ? (
+                <div className="import-field-group">
+                  <div className="file-actions">
+                    <Button variant="secondary" loading={selectingFiles} icon={<FileJson size={16} />} onClick={chooseFiles}>
+                      Choose JSON
+                    </Button>
+                    {filePaths.length > 0 ? (
+                      <Button variant="ghost" onClick={clearFiles}>
+                        Clear
+                      </Button>
+                    ) : null}
+                  </div>
+                  {filePaths.length === 0 ? (
+                    <p className="muted">Choose one or more Codex auth JSON files.</p>
+                  ) : (
+                    <ul className="file-preview-list" aria-label="Selected import files">
+                      {filePaths.map((filePath) => (
+                        <li key={filePath}>
+                          <strong>{fileName(filePath)}</strong>
+                          <span>{filePath}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {previewingBatch ? <p className="muted">Preparing batch preview...</p> : null}
+                </div>
+              ) : null}
+
+              {source === 'jsonText' ? (
+                <label className="import-field">
+                  <span>Auth JSON</span>
+                  <textarea
+                    rows={9}
+                    spellCheck={false}
+                    value={jsonText}
+                    placeholder='{"auth_mode":"oauth","tokens":{...}} or [{"id_token":"..."}] or {"type":"sub2api-data","accounts":[...]}'
+                    onChange={(event) => setJsonText(event.target.value)}
+                  />
+                </label>
+              ) : null}
+
+              {source === 'token' ? (
+                <div className="import-field-group">
+                  <label className="import-field">
+                    <span>ID token</span>
+                    <textarea
+                      rows={3}
+                      spellCheck={false}
+                      value={tokenFields.idToken}
+                      placeholder="Paste id_token"
+                      onChange={(event) => setTokenField('idToken', event.target.value)}
+                    />
+                  </label>
+                  <label className="import-field">
+                    <span>Access token</span>
+                    <textarea
+                      rows={3}
+                      spellCheck={false}
+                      value={tokenFields.accessToken}
+                      placeholder="Paste access_token"
+                      onChange={(event) => setTokenField('accessToken', event.target.value)}
+                    />
+                  </label>
+                  <label className="import-field">
+                    <span>Refresh token</span>
+                    <input
+                      value={tokenFields.refreshToken}
+                      placeholder="Optional"
+                      onChange={(event) => setTokenField('refreshToken', event.target.value)}
+                    />
+                  </label>
+                </div>
+              ) : null}
+
+              {source === 'apiKey' ? (
+                <div className="import-field-group">
+                  <label className="import-field">
+                    <span>API key</span>
+                    <input
+                      value={apiKeyFields.apiKey}
+                      placeholder="sk-..."
+                      onChange={(event) => setApiKeyField('apiKey', event.target.value)}
+                    />
+                  </label>
+                  <label className="import-field">
+                    <span>Display name</span>
+                    <input
+                      value={apiKeyFields.displayName}
+                      placeholder="Optional"
+                      onChange={(event) => setApiKeyField('displayName', event.target.value)}
+                    />
+                  </label>
+                  <label className="import-field">
+                    <span>API base URL</span>
+                    <input
+                      value={apiKeyFields.apiBaseUrl}
+                      placeholder="Optional, e.g. https://api.openai.com/v1"
+                      onChange={(event) => setApiKeyField('apiBaseUrl', event.target.value)}
+                    />
+                  </label>
+                </div>
+              ) : null}
+
+              {source === 'oauth' ? (
+                <OAuthLoginPanel
+                  callbackUrl={oauth.callbackUrl}
+                  cancelling={oauth.cancelling}
+                  login={oauth.login}
+                  portInUse={oauth.portInUse}
+                  starting={oauth.starting}
+                  step={oauth.step}
+                  submittingCallback={oauth.submittingCallback}
+                  onCancel={cancelOAuthLogin}
+                  onCallbackUrlChange={setOAuthCallbackUrl}
+                  onStart={startOAuthLogin}
+                  onSubmitCallback={submitOAuthCallbackUrl}
                 />
-              </label>
-            ) : null}
+              ) : null}
+            </div>
 
-            {source === 'token' ? (
-              <div className="import-field-group">
-                <label className="import-field">
-                  <span>ID token</span>
-                  <textarea
-                    rows={3}
-                    spellCheck={false}
-                    value={tokenFields.idToken}
-                    placeholder="Paste id_token"
-                    onChange={(event) => setTokenField('idToken', event.target.value)}
-                  />
-                </label>
-                <label className="import-field">
-                  <span>Access token</span>
-                  <textarea
-                    rows={3}
-                    spellCheck={false}
-                    value={tokenFields.accessToken}
-                    placeholder="Paste access_token"
-                    onChange={(event) => setTokenField('accessToken', event.target.value)}
-                  />
-                </label>
-                <label className="import-field">
-                  <span>Refresh token</span>
-                  <input
-                    value={tokenFields.refreshToken}
-                    placeholder="Optional"
-                    onChange={(event) => setTokenField('refreshToken', event.target.value)}
-                  />
-                </label>
-              </div>
-            ) : null}
-
-            {source === 'apiKey' ? (
-              <div className="import-field-group">
-                <label className="import-field">
-                  <span>API key</span>
-                  <input
-                    value={apiKeyFields.apiKey}
-                    placeholder="sk-..."
-                    onChange={(event) => setApiKeyField('apiKey', event.target.value)}
-                  />
-                </label>
-                <label className="import-field">
-                  <span>Display name</span>
-                  <input
-                    value={apiKeyFields.displayName}
-                    placeholder="Optional"
-                    onChange={(event) => setApiKeyField('displayName', event.target.value)}
-                  />
-                </label>
-                <label className="import-field">
-                  <span>API base URL</span>
-                  <input
-                    value={apiKeyFields.apiBaseUrl}
-                    placeholder="Optional, e.g. https://api.openai.com/v1"
-                    onChange={(event) => setApiKeyField('apiBaseUrl', event.target.value)}
-                  />
-                </label>
-              </div>
-            ) : null}
-
-            {source === 'oauth' ? (
-              <OAuthLoginPanel
-                callbackUrl={oauth.callbackUrl}
-                cancelling={oauth.cancelling}
-                login={oauth.login}
-                portInUse={oauth.portInUse}
-                starting={oauth.starting}
-                step={oauth.step}
-                submittingCallback={oauth.submittingCallback}
-                onCancel={cancelOAuthLogin}
-                onCallbackUrlChange={setOAuthCallbackUrl}
-                onStart={startOAuthLogin}
-                onSubmitCallback={submitOAuthCallbackUrl}
-              />
-            ) : null}
-          </section>
-
-          <section className="drawer-section">
-            <h3>Preview</h3>
-            {resultAccounts.length === 0 && failedImports.length === 0 ? (
-              <PreviewHint source={source} jsonText={jsonText} filePaths={filePaths} />
-            ) : null}
-            {resultAccounts.length > 0 || failedImports.length > 0 ? (
-              <p className="import-summary">
-                Added {resultAccounts.length}, failed {failedImports.length}
-              </p>
-            ) : null}
-            {batchPreview ? (
-              <BatchImportPreviewTable
-                items={batchPreview.items}
-                selectedItemIds={batchSelectedItemIds}
-                onToggleAll={setAllBatchItemsSelected}
-                onToggleItem={toggleBatchItem}
-              />
-            ) : null}
-            {resultAccounts.length > 0 ? (
-              <ul className="import-result-list" aria-label="Added accounts">
-                {resultAccounts.map((account) => (
-                  <li key={account.id}>
-                    <CheckCircle2 size={16} aria-hidden="true" />
-                    <span>
-                      <strong>{account.displayName}</strong>
-                      <small>{accountSubtitle(account)}</small>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {failedImports.length > 0 ? (
-              <ul className="import-failure-list" aria-label="Failed imports">
-                {failedImports.map((failure) => (
-                  <li key={`${failure.source}-${failure.error}`}>
-                    <strong>{fileName(failure.source)}</strong>
-                    <span>{failure.error}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
+            <section className="drawer-preview" aria-labelledby="import-preview-title">
+              <h3 id="import-preview-title">Import preview</h3>
+              {resultAccounts.length === 0 && failedImports.length === 0 ? (
+                <PreviewHint source={source} jsonText={jsonText} filePaths={filePaths} />
+              ) : null}
+              {resultAccounts.length > 0 || failedImports.length > 0 ? (
+                <p className="import-summary">
+                  Added {resultAccounts.length}, failed {failedImports.length}
+                </p>
+              ) : null}
+              {batchPreview ? (
+                <BatchImportPreviewTable
+                  items={batchPreview.items}
+                  selectedItemIds={batchSelectedItemIds}
+                  onToggleAll={setAllBatchItemsSelected}
+                  onToggleItem={toggleBatchItem}
+                />
+              ) : null}
+              {resultAccounts.length > 0 ? (
+                <ul className="import-result-list" aria-label="Added accounts">
+                  {resultAccounts.map((account) => (
+                    <li key={account.id}>
+                      <CheckCircle2 size={16} aria-hidden="true" />
+                      <span>
+                        <strong>{account.displayName}</strong>
+                        <small>{accountSubtitle(account)}</small>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {failedImports.length > 0 ? (
+                <ul className="import-failure-list" aria-label="Failed imports">
+                  {failedImports.map((failure) => (
+                    <li key={`${failure.source}-${failure.error}`}>
+                      <strong>{fileName(failure.source)}</strong>
+                      <span>{failure.error}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </section>
           </section>
         </div>
 

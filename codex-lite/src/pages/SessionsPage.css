@@ -124,11 +124,16 @@
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border-radius: 10px;
   background: var(--color-blue-soft);
   color: var(--color-blue);
+}
+
+.session-group-icon > .lucide {
+  width: 16px;
+  height: 16px;
 }
 
 .session-group-title {

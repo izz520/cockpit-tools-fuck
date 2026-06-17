@@ -14,10 +14,17 @@
 }
 
 .empty-state-icon {
-  width: 48px;
-  height: 48px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
   color: var(--color-text-muted);
   opacity: 0.5;
+}
+
+.empty-state-icon > .lucide {
+  width: 20px;
+  height: 20px;
 }
 
 .empty-state h2 {

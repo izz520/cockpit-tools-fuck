@@ -203,43 +203,47 @@ export function AccountRow({
               </button>
             </span>
           </>
-        ) : hasQuotaError && quotaErrorSummary ? (
-          <div className="account-detail-error" role="alert">
-            <span className="account-detail-error-body">
-              <strong>{quotaErrorSummary.title}</strong>
-              <span>{quotaErrorSummary.action}</span>
-            </span>
-            {canReauthenticate ? (
-              <span className="account-detail-error-actions">
-                <Button variant="secondary" icon={<KeyRound size={14} />} onClick={() => onReauthenticate(account.id)}>
-                  重新授权
-                </Button>
-              </span>
-            ) : null}
-          </div>
         ) : (
-          <span className="quota-lines" aria-hidden="true">
-            <span className="quota-line">
-              <span>
-                <Clock3 size={16} />
-                5h
+          <div className="account-health-slot">
+            {hasQuotaError && quotaErrorSummary ? (
+              <div className="account-detail-error" role="alert">
+                <span className="account-detail-error-body">
+                  <strong>{quotaErrorSummary.title}</strong>
+                  <span>{quotaErrorSummary.action}</span>
+                </span>
+                {canReauthenticate ? (
+                  <span className="account-detail-error-actions">
+                    <Button variant="secondary" icon={<KeyRound size={14} />} onClick={() => onReauthenticate(account.id)}>
+                      重新授权
+                    </Button>
+                  </span>
+                ) : null}
+              </div>
+            ) : (
+              <span className="quota-lines" aria-hidden="true">
+                <span className="quota-line">
+                  <span>
+                    <Clock3 size={16} />
+                    5h
+                  </span>
+                  <strong>{quotaUnsupported ? 'API' : formatQuotaLabel(hourly)}</strong>
+                </span>
+                <span className="quota-track">
+                  <span style={{ width: `${quotaUnsupported ? 100 : normalizedHourly}%` }} />
+                </span>
+                <span className="quota-line">
+                  <span>
+                    <CalendarDays size={16} />
+                    Weekly
+                  </span>
+                  <strong>{quotaUnsupported ? '可用' : formatQuotaLabel(weekly)}</strong>
+                </span>
+                <span className="quota-track">
+                  <span style={{ width: `${quotaUnsupported ? 100 : normalizedWeekly}%` }} />
+                </span>
               </span>
-              <strong>{quotaUnsupported ? 'API' : formatQuotaLabel(hourly)}</strong>
-            </span>
-            <span className="quota-track">
-              <span style={{ width: `${quotaUnsupported ? 100 : normalizedHourly}%` }} />
-            </span>
-            <span className="quota-line">
-              <span>
-                <CalendarDays size={16} />
-                Weekly
-              </span>
-              <strong>{quotaUnsupported ? '可用' : formatQuotaLabel(weekly)}</strong>
-            </span>
-            <span className="quota-track">
-              <span style={{ width: `${quotaUnsupported ? 100 : normalizedWeekly}%` }} />
-            </span>
-          </span>
+            )}
+          </div>
         )}
 
         {!quotaUnsupported ? (
@@ -256,7 +260,7 @@ export function AccountRow({
       <div className="account-card-actions">
         <IconButton
           label={account.isCurrent ? 'Current account' : 'Switch account'}
-          icon={switching ? <RefreshCw className="spin-icon" size={18} /> : <Play size={18} />}
+          icon={switching ? <RefreshCw className="spin-icon" size={16} /> : <Play size={16} />}
           active={account.isCurrent}
           disabled={account.isCurrent || switching}
           onClick={() => onSwitch(account.id)}
@@ -264,17 +268,17 @@ export function AccountRow({
         {!quotaUnsupported ? (
           <IconButton
             label="Refresh quota"
-            icon={refreshing ? <RefreshCw className="spin-icon" size={18} /> : <RefreshCw size={18} />}
+            icon={refreshing ? <RefreshCw className="spin-icon" size={16} /> : <RefreshCw size={16} />}
             disabled={refreshing}
             onClick={() => onRefreshQuota(account.id)}
           />
         ) : null}
         {quotaUnsupported ? (
-          <IconButton label="Edit API account" icon={<Pencil size={18} />} onClick={() => onEditApiAccount(account)} />
+          <IconButton label="Edit API account" icon={<Pencil size={16} />} onClick={() => onEditApiAccount(account)} />
         ) : null}
         <IconButton
           label="Delete account"
-          icon={deleting ? <RefreshCw className="spin-icon" size={18} /> : <Trash2 size={18} />}
+          icon={deleting ? <RefreshCw className="spin-icon" size={16} /> : <Trash2 size={16} />}
           disabled={deleting}
           onClick={() => onDelete(account.id)}
         />

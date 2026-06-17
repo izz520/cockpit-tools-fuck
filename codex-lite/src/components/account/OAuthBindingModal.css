@@ -83,7 +83,15 @@
   font-weight: 780;
 }
 
-.oauth-binding-target span svg {
+.oauth-binding-modal header > button > .lucide,
+.oauth-binding-radio > .lucide {
+  width: 14px;
+  height: 14px;
+}
+
+.oauth-binding-target span .lucide {
+  width: 14px;
+  height: 14px;
   color: var(--color-primary-active);
 }
 
@@ -186,9 +194,11 @@
   font-weight: 690;
 }
 
-.oauth-binding-preview svg,
-.oauth-binding-empty svg {
+.oauth-binding-preview .lucide,
+.oauth-binding-empty .lucide {
   flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
   color: var(--color-success);
 }
 

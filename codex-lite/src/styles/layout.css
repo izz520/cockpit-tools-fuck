@@ -94,22 +94,26 @@
 .app-logo {
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-lg);
   background: linear-gradient(145deg,
     oklch(0.6 0.15 195),
     oklch(0.5 0.16 200));
   color: white;
-  font-size: 22px;
-  font-weight: var(--font-weight-extrabold);
-  letter-spacing: 0;
   box-shadow:
     0 8px 20px oklch(0.5 0.15 195 / 0.3),
     0 4px 10px oklch(0.45 0.16 195 / 0.2),
     inset 0 1px 1px oklch(1 0 0 / 0.3);
   position: relative;
   overflow: hidden;
+}
+
+.app-logo > .lucide {
+  position: relative;
+  z-index: 1;
+  width: 19px;
+  height: 19px;
 }
 
 .app-logo::before {
@@ -167,9 +171,9 @@
   transition: opacity var(--transition-base);
 }
 
-.nav-button > svg {
-  width: 20px;
-  height: 20px;
+.nav-button > .lucide {
+  width: 18px;
+  height: 18px;
   position: relative;
   z-index: 1;
 }
@@ -207,36 +211,6 @@
 .nav-button-muted:hover {
   background: transparent;
   color: var(--color-text-strong);
-}
-
-/* Accounts button with special icon styling */
-.nav-button-accounts {
-  position: relative;
-}
-
-.nav-button-accounts > svg {
-  width: 42px;
-  height: 42px;
-  padding: 11px;
-  border-radius: 11px;
-  background: linear-gradient(145deg,
-    oklch(0.18 0.01 260),
-    oklch(0.12 0.008 270));
-  color: white;
-  box-shadow:
-    var(--shadow-sm),
-    inset 0 1px 1px oklch(1 0 0 / 0.15);
-}
-
-.nav-button-accounts:hover:not(:disabled) > svg,
-.nav-button-accounts.active > svg {
-  background: linear-gradient(145deg,
-    oklch(0.2 0.01 260),
-    oklch(0.14 0.008 270));
-  color: white;
-  box-shadow:
-    var(--shadow-md),
-    inset 0 1px 1px oklch(1 0 0 / 0.2);
 }
 
 .nav-footer {

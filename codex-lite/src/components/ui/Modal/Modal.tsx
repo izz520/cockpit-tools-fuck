@@ -67,7 +67,7 @@ export function Modal({
             <IconButton
               ref={closeButtonRef}
               label="Close modal"
-              icon={<X size={18} />}
+              icon={<X size={16} />}
               onClick={onClose}
             />
           ) : null}

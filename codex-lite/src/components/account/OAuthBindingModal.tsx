@@ -49,7 +49,7 @@ export function OAuthBindingModal({
             <p>登录态使用 OAuth，API 请求继续使用当前 API Key 的基础地址与配置。</p>
           </div>
           <button type="button" aria-label="Close OAuth binding modal" onClick={onCancel}>
-            <X size={18} />
+            <X size={16} />
           </button>
         </header>
 
@@ -65,7 +65,7 @@ export function OAuthBindingModal({
         <div className="oauth-binding-list" role="radiogroup" aria-label="OAuth accounts">
           {oauthAccounts.length === 0 ? (
             <div className="oauth-binding-empty">
-              <ShieldCheck size={20} />
+              <ShieldCheck size={18} />
               <span>还没有可绑定的 OAuth 账号，请先添加 OAuth 登录。</span>
             </div>
           ) : null}

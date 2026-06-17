@@ -58,7 +58,9 @@
   font-weight: 780;
 }
 
-.api-edit-fields label > span svg {
+.api-edit-fields label > span .lucide {
+  width: 14px;
+  height: 14px;
   color: var(--color-primary-active);
 }
 
