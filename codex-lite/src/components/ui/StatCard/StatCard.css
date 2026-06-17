@@ -9,12 +9,32 @@
   column-gap: 14px;
   min-height: 94px;
   padding: var(--space-4);
-  border: 1px solid oklch(0.94 0.016 255 / 0.76);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-card);
-  background: var(--color-surface);
-  box-shadow: 0 6px 12px oklch(0.5 0.05 260 / 0.05);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: var(--glass-light);
+  box-shadow: var(--shadow-glass-soft), var(--shadow-glass-inset);
+  backdrop-filter: var(--blur-glass-medium);
+  -webkit-backdrop-filter: var(--blur-glass-medium);
+  transition: all var(--transition-base);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg,
+    oklch(1 0 0 / 0.5) 0%,
+    oklch(0.98 0.01 250 / 0.2) 100%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.stat-card:hover {
+  border-color: var(--glass-border-strong);
+  box-shadow: var(--shadow-md), var(--shadow-glass-inset);
+  transform: translateY(-2px);
 }
 
 .stat-icon {
@@ -24,22 +44,34 @@
   width: 48px;
   height: 48px;
   border-radius: var(--radius-control);
+  position: relative;
+  z-index: 1;
+  box-shadow: var(--shadow-sm);
 }
 
 .stat-icon-primary,
 .stat-icon-purple {
-  background: var(--color-primary-soft);
+  background: linear-gradient(135deg,
+    oklch(0.96 0.05 285 / 0.9),
+    oklch(0.94 0.06 295 / 0.85));
   color: var(--color-primary);
+  border: 1px solid oklch(0.9 0.06 285 / 0.3);
 }
 
 .stat-icon-blue {
-  background: var(--color-blue-soft);
+  background: linear-gradient(135deg,
+    oklch(0.96 0.04 250 / 0.9),
+    oklch(0.94 0.05 260 / 0.85));
   color: var(--color-blue);
+  border: 1px solid oklch(0.88 0.06 255 / 0.3);
 }
 
 .stat-icon-green {
-  background: var(--color-success-soft);
+  background: linear-gradient(135deg,
+    oklch(0.97 0.05 155 / 0.9),
+    oklch(0.95 0.06 145 / 0.85));
   color: var(--color-success);
+  border: 1px solid oklch(0.88 0.08 151 / 0.3);
 }
 
 .stat-label {

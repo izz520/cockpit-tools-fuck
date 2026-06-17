@@ -2,16 +2,23 @@
   color-scheme: light;
 
   /* ========================================
-     Colors - Base
+     Colors - Base (Glass Morphism)
      ======================================== */
-  --color-bg: oklch(1 0 0);
-  --color-canvas: oklch(0.985 0.004 210);
-  --color-surface: oklch(0.998 0.002 210 / 0.82);
-  --color-surface-raised: oklch(1 0 0 / 0.9);
-  --color-material: oklch(0.985 0.006 235 / 0.72);
-  --color-material-strong: oklch(1 0 0 / 0.92);
+  --color-bg: oklch(0.98 0.008 250);
+  --color-canvas: oklch(0.97 0.012 240);
+  --color-surface: oklch(1 0 0 / 0.65);
+  --color-surface-raised: oklch(1 0 0 / 0.75);
+  --color-material: oklch(0.98 0.01 235 / 0.6);
+  --color-material-strong: oklch(0.99 0.005 240 / 0.8);
   --color-control: oklch(0.965 0.009 252);
   --color-control-hover: oklch(0.945 0.043 292);
+
+  /* Glass effect backgrounds */
+  --glass-light: oklch(1 0 0 / 0.5);
+  --glass-medium: oklch(0.98 0.01 240 / 0.6);
+  --glass-strong: oklch(0.95 0.015 245 / 0.7);
+  --glass-border: oklch(1 0 0 / 0.18);
+  --glass-border-strong: oklch(0.9 0.02 250 / 0.25);
 
   /* ========================================
      Colors - Text (WCAG AA compliant)
@@ -84,34 +91,42 @@
   --space-16: 64px;
 
   /* ========================================
-     Shadows
+     Shadows (Glass Morphism)
      ======================================== */
-  --shadow-sm: 0 4px 10px oklch(0.55 0.03 260 / 0.08);
-  --shadow-md: 0 10px 24px oklch(0.5 0.04 260 / 0.12);
-  --shadow-lg: 0 16px 32px oklch(0.48 0.04 260 / 0.16);
-  --shadow-modal: 0 24px 64px oklch(0.22 0.02 255 / 0.24);
+  --shadow-sm: 0 2px 8px oklch(0.3 0.02 260 / 0.06), 0 1px 3px oklch(0.2 0.01 260 / 0.08);
+  --shadow-md: 0 8px 20px oklch(0.3 0.03 260 / 0.1), 0 2px 6px oklch(0.2 0.02 260 / 0.08);
+  --shadow-lg: 0 16px 40px oklch(0.3 0.03 260 / 0.14), 0 4px 12px oklch(0.2 0.02 260 / 0.1);
+  --shadow-modal: 0 28px 60px oklch(0.2 0.02 255 / 0.18), 0 8px 24px oklch(0.15 0.01 260 / 0.12);
+
+  /* Glass inner shadows */
+  --shadow-glass-inset: inset 0 1px 1px oklch(1 0 0 / 0.5), inset 0 -1px 1px oklch(0 0 0 / 0.03);
+  --shadow-glass-soft: 0 8px 32px oklch(0.3 0.04 270 / 0.12);
 
   /* ========================================
-     Effects
+     Effects (Enhanced Glass)
      ======================================== */
-  --blur-material: saturate(170%) blur(18px);
+  --blur-material: saturate(180%) blur(20px);
+  --blur-glass-light: saturate(160%) blur(40px);
+  --blur-glass-medium: saturate(180%) blur(28px);
+  --blur-glass-strong: saturate(200%) blur(16px);
 
   /* ========================================
-     Border Radius
+     Border Radius (More Rounded)
      ======================================== */
-  --radius-sm: 8px;
-  --radius-md: 10px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-card: 16px;
-  --radius-control: 10px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 22px;
+  --radius-card: 20px;
+  --radius-control: 12px;
 
   /* ========================================
-     Transitions
+     Transitions (Fluid)
      ======================================== */
-  --transition-fast: 140ms cubic-bezier(0.2, 0, 0, 1);
-  --transition-base: 180ms cubic-bezier(0.2, 0, 0, 1);
-  --transition-slow: 240ms cubic-bezier(0.2, 0, 0, 1);
+  --transition-fast: 200ms cubic-bezier(0.2, 0, 0, 1);
+  --transition-base: 280ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 380ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* ========================================
      Layout

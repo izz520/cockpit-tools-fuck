@@ -4,19 +4,21 @@
   display: grid;
   place-items: center;
   padding: var(--space-4);
-  background: oklch(0.22 0.02 255 / 0.32);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: oklch(0.15 0.02 260 / 0.45);
+  backdrop-filter: var(--blur-glass-light);
+  -webkit-backdrop-filter: var(--blur-glass-light);
   z-index: 50;
-  animation: fadeIn var(--transition-base);
+  animation: fadeIn var(--transition-slow);
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
+    backdrop-filter: blur(0px);
   }
   to {
     opacity: 1;
+    backdrop-filter: var(--blur-glass-light);
   }
 }
 
@@ -24,19 +26,32 @@
   display: flex;
   flex-direction: column;
   max-height: 90vh;
-  border: 1px solid oklch(0.94 0.016 255 / 0.76);
+  border: 1px solid var(--glass-border-strong);
   border-radius: var(--radius-xl);
-  background: var(--color-material-strong);
-  box-shadow: var(--shadow-modal);
-  backdrop-filter: var(--blur-material);
-  -webkit-backdrop-filter: var(--blur-material);
-  animation: slideIn var(--transition-base);
+  background: var(--glass-strong);
+  box-shadow: var(--shadow-modal), var(--shadow-glass-inset);
+  backdrop-filter: var(--blur-glass-medium);
+  -webkit-backdrop-filter: var(--blur-glass-medium);
+  animation: slideIn var(--transition-slow);
+  position: relative;
+  overflow: hidden;
+}
+
+.modal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg,
+    oklch(1 0 0 / 0.6) 0%,
+    oklch(0.97 0.015 250 / 0.3) 100%);
+  pointer-events: none;
+  border-radius: inherit;
 }
 
 @keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateY(20px) scale(0.98);
+    transform: translateY(30px) scale(0.95);
   }
   to {
     opacity: 1;
@@ -62,7 +77,9 @@
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-6) var(--space-6) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--glass-border);
+  position: relative;
+  z-index: 1;
 }
 
 .modal-header h2 {
@@ -78,6 +95,8 @@
   min-height: 0;
   overflow: auto;
   padding: var(--space-5) var(--space-6);
+  position: relative;
+  z-index: 1;
 }
 
 .modal-footer {
@@ -86,7 +105,9 @@
   justify-content: flex-end;
   gap: var(--space-2);
   padding: var(--space-4) var(--space-6) var(--space-6);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--glass-border);
+  position: relative;
+  z-index: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
