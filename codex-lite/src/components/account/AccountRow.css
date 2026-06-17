@@ -31,13 +31,13 @@
 }
 
 .account-card.current {
-  border-color: oklch(0.7 0.16 265 / 0.5);
+  border-color: oklch(0.65 0.15 195 / 0.5);
   background: linear-gradient(135deg,
-    oklch(0.98 0.02 270 / 0.8),
-    oklch(0.99 0.01 260 / 0.75));
+    oklch(0.96 0.03 195 / 0.8),
+    oklch(0.97 0.02 200 / 0.75));
   box-shadow:
-    0 0 0 1px oklch(0.68 0.158 260 / 0.4),
-    0 12px 32px oklch(0.52 0.13 270 / 0.15),
+    0 0 0 1px oklch(0.6 0.15 195 / 0.4),
+    0 12px 32px oklch(0.5 0.15 195 / 0.15),
     var(--shadow-glass-inset);
 }
 
@@ -211,7 +211,7 @@
 .api-account-field-actions button:hover:not(:disabled) {
   color: var(--color-primary-active);
   background: oklch(1 0 0 / 0.9);
-  border-color: oklch(0.9 0.06 285 / 0.3);
+  border-color: oklch(0.85 0.08 195 / 0.3);
   box-shadow: var(--shadow-sm);
 }
 
@@ -452,9 +452,11 @@
 
 .account-card-actions .icon-button.active {
   border-color: transparent;
-  background: linear-gradient(135deg, var(--color-blue), var(--color-primary));
+  background: linear-gradient(135deg,
+    oklch(0.6 0.15 195),
+    oklch(0.55 0.16 200));
   color: white;
-  box-shadow: 0 8px 14px oklch(0.48 0.17 270 / 0.22);
+  box-shadow: 0 8px 14px oklch(0.5 0.15 195 / 0.25);
 }
 
 .account-card-mode {

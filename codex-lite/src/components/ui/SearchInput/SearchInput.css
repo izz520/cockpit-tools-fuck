@@ -33,7 +33,7 @@
 
 .search-input:focus-within {
   box-shadow: var(--focus-ring), var(--shadow-glass-inset);
-  border-color: oklch(0.88 0.08 270 / 0.4);
+  border-color: oklch(0.8 0.1 195 / 0.4);
   background: var(--glass-medium);
 }
 

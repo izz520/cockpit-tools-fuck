@@ -35,12 +35,12 @@
   --color-border-strong: oklch(0.82 0.05 260 / 0.72);
 
   /* ========================================
-     Colors - Brand
+     Colors - Brand (Cyan/Teal Theme)
      ======================================== */
-  --color-primary: oklch(0.545 0.208 285);
-  --color-primary-hover: oklch(0.61 0.19 285);
-  --color-primary-active: oklch(0.426 0.184 285);
-  --color-primary-soft: oklch(0.945 0.043 292);
+  --color-primary: oklch(0.6 0.15 195);
+  --color-primary-hover: oklch(0.65 0.14 195);
+  --color-primary-active: oklch(0.5 0.16 195);
+  --color-primary-soft: oklch(0.94 0.04 195);
 
   /* ========================================
      Colors - Semantic

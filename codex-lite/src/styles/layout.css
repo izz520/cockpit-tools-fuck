@@ -1,5 +1,5 @@
 /* ========================================
-   App Shell Layout (Glass Morphism)
+   App Shell Layout (Glass Morphism - Cyan Theme)
    ======================================== */
 
 .app-shell {
@@ -12,10 +12,10 @@
   overflow: hidden;
   position: relative;
   background:
-    radial-gradient(circle at 20% 10%, oklch(0.88 0.08 280 / 0.4), transparent 50%),
-    radial-gradient(circle at 80% 80%, oklch(0.9 0.06 310 / 0.35), transparent 50%),
-    radial-gradient(circle at 40% 60%, oklch(0.92 0.05 250 / 0.3), transparent 60%),
-    linear-gradient(135deg, oklch(0.96 0.02 240), oklch(0.94 0.03 260));
+    radial-gradient(circle at 20% 10%, oklch(0.88 0.08 190 / 0.4), transparent 50%),
+    radial-gradient(circle at 80% 80%, oklch(0.9 0.06 200 / 0.35), transparent 50%),
+    radial-gradient(circle at 40% 60%, oklch(0.92 0.05 210 / 0.3), transparent 60%),
+    linear-gradient(135deg, oklch(0.96 0.02 200), oklch(0.94 0.03 210));
 }
 
 /* Animated gradient background */
@@ -24,8 +24,8 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 60% 30%, oklch(0.9 0.07 270 / 0.3), transparent 50%),
-    radial-gradient(circle at 30% 70%, oklch(0.88 0.08 290 / 0.25), transparent 50%);
+    radial-gradient(circle at 60% 30%, oklch(0.9 0.07 195 / 0.3), transparent 50%),
+    radial-gradient(circle at 30% 70%, oklch(0.88 0.08 205 / 0.25), transparent 50%);
   animation: gradientShift 15s ease infinite;
   z-index: 0;
 }
@@ -100,15 +100,15 @@
   height: 42px;
   border-radius: var(--radius-lg);
   background: linear-gradient(145deg,
-    oklch(0.6 0.22 285),
-    oklch(0.5 0.2 295));
+    oklch(0.6 0.15 195),
+    oklch(0.5 0.16 200));
   color: white;
   font-size: 22px;
   font-weight: var(--font-weight-extrabold);
   letter-spacing: 0;
   box-shadow:
-    0 8px 20px oklch(0.45 0.18 285 / 0.3),
-    0 4px 10px oklch(0.4 0.2 285 / 0.2),
+    0 8px 20px oklch(0.5 0.15 195 / 0.3),
+    0 4px 10px oklch(0.45 0.16 195 / 0.2),
     inset 0 1px 1px oklch(1 0 0 / 0.3);
   position: relative;
   overflow: hidden;
@@ -189,8 +189,8 @@
 
 .nav-button.active {
   background: linear-gradient(135deg,
-    oklch(0.95 0.05 280 / 0.7),
-    oklch(0.97 0.03 290 / 0.6));
+    oklch(0.93 0.06 195 / 0.7),
+    oklch(0.95 0.04 200 / 0.6));
   color: var(--color-primary-active);
   backdrop-filter: var(--blur-glass-strong);
   -webkit-backdrop-filter: var(--blur-glass-strong);
