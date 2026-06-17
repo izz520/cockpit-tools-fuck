@@ -14,16 +14,6 @@
   transition: all var(--transition-base);
 }
 
-.account-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg,
-    oklch(1 0 0 / 0.5) 0%,
-    oklch(0.98 0.01 250 / 0.2) 100%);
-  pointer-events: none;
-}
-
 .account-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md), var(--shadow-glass-inset);

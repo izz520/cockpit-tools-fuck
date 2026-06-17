@@ -14,19 +14,19 @@
   --color-control-hover: oklch(0.945 0.043 292);
 
   /* Glass effect backgrounds */
-  --glass-light: oklch(1 0 0 / 0.5);
-  --glass-medium: oklch(0.98 0.01 240 / 0.6);
-  --glass-strong: oklch(0.95 0.015 245 / 0.7);
-  --glass-border: oklch(1 0 0 / 0.18);
-  --glass-border-strong: oklch(0.9 0.02 250 / 0.25);
+  --glass-light: oklch(1 0 0 / 0.82);
+  --glass-medium: oklch(0.99 0.005 200 / 0.85);
+  --glass-strong: oklch(0.98 0.008 200 / 0.9);
+  --glass-border: oklch(0.85 0.02 200 / 0.5);
+  --glass-border-strong: oklch(0.8 0.04 200 / 0.6);
 
   /* ========================================
      Colors - Text (WCAG AA compliant)
      ======================================== */
-  --color-text-strong: oklch(0.205 0.024 236);
-  --color-text: oklch(0.32 0.036 242);
-  --color-text-muted: oklch(0.42 0.052 245); /* Adjusted for better contrast */
-  --color-text-quiet: oklch(0.55 0.037 242); /* Adjusted for better contrast */
+  --color-text-strong: oklch(0.18 0.02 220);
+  --color-text: oklch(0.28 0.03 225);
+  --color-text-muted: oklch(0.42 0.04 228);
+  --color-text-quiet: oklch(0.52 0.035 228);
 
   /* ========================================
      Colors - Borders
@@ -99,16 +99,16 @@
   --shadow-modal: 0 28px 60px oklch(0.2 0.02 255 / 0.18), 0 8px 24px oklch(0.15 0.01 260 / 0.12);
 
   /* Glass inner shadows */
-  --shadow-glass-inset: inset 0 1px 1px oklch(1 0 0 / 0.5), inset 0 -1px 1px oklch(0 0 0 / 0.03);
-  --shadow-glass-soft: 0 8px 32px oklch(0.3 0.04 270 / 0.12);
+  --shadow-glass-inset: inset 0 1px 1px oklch(1 0 0 / 0.7), inset 0 -1px 1px oklch(0 0 0 / 0.02);
+  --shadow-glass-soft: 0 6px 20px oklch(0.5 0.04 200 / 0.1);
 
   /* ========================================
      Effects (Enhanced Glass)
      ======================================== */
-  --blur-material: saturate(180%) blur(20px);
-  --blur-glass-light: saturate(160%) blur(40px);
-  --blur-glass-medium: saturate(180%) blur(28px);
-  --blur-glass-strong: saturate(200%) blur(16px);
+  --blur-material: saturate(140%) blur(12px);
+  --blur-glass-light: saturate(130%) blur(20px);
+  --blur-glass-medium: saturate(140%) blur(14px);
+  --blur-glass-strong: saturate(150%) blur(8px);
 
   /* ========================================
      Border Radius (More Rounded)

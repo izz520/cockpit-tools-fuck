@@ -12,10 +12,9 @@
   overflow: hidden;
   position: relative;
   background:
-    radial-gradient(circle at 20% 10%, oklch(0.88 0.08 190 / 0.4), transparent 50%),
-    radial-gradient(circle at 80% 80%, oklch(0.9 0.06 200 / 0.35), transparent 50%),
-    radial-gradient(circle at 40% 60%, oklch(0.92 0.05 210 / 0.3), transparent 60%),
-    linear-gradient(135deg, oklch(0.96 0.02 200), oklch(0.94 0.03 210));
+    radial-gradient(circle at 90% 8%, oklch(0.93 0.05 195 / 0.22), transparent 32%),
+    radial-gradient(circle at 12% 92%, oklch(0.94 0.04 200 / 0.16), transparent 36%),
+    oklch(0.995 0.002 200);
 }
 
 /* Animated gradient background */
@@ -24,20 +23,20 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 60% 30%, oklch(0.9 0.07 195 / 0.3), transparent 50%),
-    radial-gradient(circle at 30% 70%, oklch(0.88 0.08 205 / 0.25), transparent 50%);
-  animation: gradientShift 15s ease infinite;
+    radial-gradient(circle at 70% 25%, oklch(0.93 0.045 195 / 0.14), transparent 42%),
+    radial-gradient(circle at 35% 75%, oklch(0.94 0.04 205 / 0.1), transparent 45%);
+  animation: gradientShift 18s ease infinite;
   z-index: 0;
 }
 
 @keyframes gradientShift {
   0%, 100% {
-    opacity: 0.6;
-    transform: scale(1) rotate(0deg);
+    opacity: 0.7;
+    transform: scale(1);
   }
   50% {
-    opacity: 0.8;
-    transform: scale(1.1) rotate(5deg);
+    opacity: 1;
+    transform: scale(1.06);
   }
 }
 
@@ -58,7 +57,7 @@
   min-width: 0;
   padding: 28px 14px 20px;
   border-right: 1px solid var(--glass-border);
-  background: var(--glass-medium);
+  background: oklch(1 0 0 / 0.65);
   backdrop-filter: var(--blur-glass-medium);
   -webkit-backdrop-filter: var(--blur-glass-medium);
   box-shadow: var(--shadow-glass-inset);
@@ -71,9 +70,8 @@
   inset: 0;
   border-radius: 0;
   background: linear-gradient(180deg,
-    oklch(1 0 0 / 0.4) 0%,
-    oklch(1 0 0 / 0.1) 50%,
-    oklch(0.95 0.01 250 / 0.2) 100%);
+    oklch(1 0 0 / 0.5) 0%,
+    oklch(1 0 0 / 0.2) 100%);
   pointer-events: none;
 }
 
