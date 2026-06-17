@@ -1,0 +1,158 @@
+/* ========================================
+   Utility Classes
+   ======================================== */
+
+/* Typography Utilities */
+.muted {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-semibold);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* Section Headers */
+.section-title {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-strong);
+  font-size: 24px;
+  line-height: 30px;
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: 0;
+}
+
+.page-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-5);
+  margin-bottom: 22px;
+}
+
+/* Panel/Card Container */
+.panel {
+  width: min(860px, 100%);
+  min-height: 0;
+  padding: var(--space-6);
+  border: 1px solid oklch(0.94 0.016 255 / 0.76);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: 0 10px 26px oklch(0.5 0.05 260 / 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Toolbar Actions */
+.toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Settings Grid (for SettingsPage) */
+.settings-grid {
+  display: grid;
+  gap: 0;
+  margin: 22px 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, oklch(0.988 0.008 252), white 76%);
+}
+
+.settings-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: center;
+  min-height: 52px;
+  padding: var(--space-3) 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.settings-row:last-child {
+  border-bottom: 0;
+}
+
+.settings-row span {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: var(--font-weight-extrabold);
+}
+
+.settings-row code,
+.settings-row strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text-strong);
+  font-size: 13px;
+}
+
+/* Log List (for LogsPage) */
+.log-list {
+  display: grid;
+  gap: 10px;
+}
+
+.log-filter-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: var(--space-4);
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-control);
+}
+
+.log-filter-tabs button {
+  height: 30px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-bold);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.log-filter-tabs button:hover,
+.log-filter-tabs button.active {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-active);
+}
+
+.log-entry {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: oklch(0.988 0.008 252 / 0.86);
+}
+
+.log-entry span {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: var(--font-weight-extrabold);
+}
+
+.log-entry code {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* Responsive Utilities */
+@media (max-width: 760px) {
+  .page-section-header {
+    flex-direction: column;
+  }
+
+  .settings-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}

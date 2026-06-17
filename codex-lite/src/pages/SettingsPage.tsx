@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Button } from '../components/ui/Button';
+import { Panel } from '../components/ui/Panel/Panel';
 import { openDataDir, openLogDir } from '../services/systemService';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import type { SystemSnapshot } from '../types/system';
@@ -22,7 +23,7 @@ export function SettingsPage() {
 
   return (
     <div className="content">
-      <section className="panel">
+      <Panel>
         <h2 className="section-title">设置</h2>
         <p className="muted">本地路径和隐私相关配置，仅在当前设备生效。</p>
         {error ? <p className="muted">{error.message}</p> : null}
@@ -53,7 +54,7 @@ export function SettingsPage() {
             打开日志
           </Button>
         </div>
-      </section>
+      </Panel>
     </div>
   );
 }

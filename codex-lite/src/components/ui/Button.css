@@ -5,17 +5,17 @@
   gap: 9px;
   height: 38px;
   padding: 0 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   cursor: pointer;
   font-size: 14px;
-  font-weight: 760;
+  font-weight: var(--font-weight-bold);
   letter-spacing: 0;
   transition:
-    background 160ms ease,
-    color 160ms ease,
-    filter 160ms ease,
-    transform 160ms ease,
-    border-color 160ms ease;
+    background var(--transition-base),
+    color var(--transition-base),
+    filter var(--transition-base),
+    transform var(--transition-base),
+    border-color var(--transition-base);
 }
 
 .button:disabled {

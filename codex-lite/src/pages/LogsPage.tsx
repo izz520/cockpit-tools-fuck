@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from '../components/ui/Button';
+import { Panel } from '../components/ui/Panel/Panel';
+import { EmptyState } from '../components/ui/EmptyState/EmptyState';
 import { getLogSnapshot, openLogDir } from '../services/systemService';
 import type { LogEntry } from '../types/system';
 
@@ -38,7 +40,7 @@ export function LogsPage() {
 
   return (
     <div className="content">
-      <section className="panel">
+      <Panel>
         <div className="page-section-header">
           <div>
             <h2 className="section-title">日志</h2>
@@ -69,7 +71,17 @@ export function LogsPage() {
           ))}
         </div>
         {filteredEntries.length === 0 ? (
-          <pre className="mono">{entries.length === 0 ? '还没有加载日志。' : '当前筛选条件下没有日志。'}</pre>
+          entries.length === 0 ? (
+            <EmptyState
+              title="还没有加载日志"
+              description="点击刷新按钮加载最新的日志条目。"
+            />
+          ) : (
+            <EmptyState
+              title="当前筛选条件下没有日志"
+              description={`没有找到 ${logFilters.find(f => f.value === filter)?.label} 级别的日志。`}
+            />
+          )
         ) : (
           <div className="log-list">
             {filteredEntries.map((entry, index) => (
@@ -80,7 +92,7 @@ export function LogsPage() {
             ))}
           </div>
         )}
-      </section>
+      </Panel>
     </div>
   );
 }

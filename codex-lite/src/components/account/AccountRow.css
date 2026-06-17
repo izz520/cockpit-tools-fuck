@@ -58,7 +58,7 @@
   color: var(--color-text-strong);
   font-size: 13px;
   line-height: 17px;
-  font-weight: 790;
+  font-weight: var(--font-weight-extrabold);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -70,7 +70,7 @@
   color: var(--color-text-muted);
   font-size: 12px;
   line-height: 16px;
-  font-weight: 650;
+  font-weight: var(--font-weight-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -85,7 +85,7 @@
   background: var(--color-primary-soft);
   color: var(--color-primary-active);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--font-weight-extrabold);
 }
 
 .account-plan-plus {
@@ -140,7 +140,7 @@
   min-width: 0;
   color: var(--color-text-muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: var(--font-weight-extrabold);
 }
 
 .api-account-field-label svg {
@@ -192,7 +192,7 @@
   color: var(--color-text-strong);
   font-family: var(--font-mono);
   font-size: 12px;
-  font-weight: 760;
+  font-weight: var(--font-weight-bold);
   line-height: 18px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -209,7 +209,7 @@
   background: linear-gradient(90deg, var(--color-success-soft), oklch(0.968 0.02 235));
   color: var(--color-success);
   font-size: 11px;
-  font-weight: 760;
+  font-weight: var(--font-weight-bold);
 }
 
 .api-oauth-binding span {
@@ -234,7 +234,7 @@
   color: var(--color-text-muted);
   font: inherit;
   font-size: 11px;
-  font-weight: 760;
+  font-weight: var(--font-weight-bold);
   cursor: pointer;
 }
 
@@ -267,7 +267,7 @@
   gap: 10px;
   color: var(--color-text-muted);
   font-size: 11px;
-  font-weight: 720;
+  font-weight: var(--font-weight-bold);
 }
 
 .quota-line span,
@@ -279,7 +279,7 @@
 
 .quota-line strong {
   color: var(--color-success);
-  font-weight: 800;
+  font-weight: var(--font-weight-extrabold);
   font-variant-numeric: tabular-nums;
 }
 
@@ -309,7 +309,7 @@
   background: linear-gradient(90deg, var(--color-success-soft), oklch(0.968 0.02 235));
   color: var(--color-success);
   font-size: 11px;
-  font-weight: 760;
+  font-weight: var(--font-weight-bold);
 }
 
 .account-validity > span:first-child {
@@ -320,7 +320,7 @@
   min-width: 0;
   overflow: hidden;
   color: var(--color-text-muted);
-  font-weight: 720;
+  font-weight: var(--font-weight-bold);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -369,7 +369,7 @@
 
 .account-detail-error strong {
   color: var(--color-error);
-  font-weight: 760;
+  font-weight: var(--font-weight-bold);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;

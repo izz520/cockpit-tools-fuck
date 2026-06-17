@@ -28,7 +28,7 @@
   color: var(--color-text-strong);
   font-size: 20px;
   line-height: 28px;
-  font-weight: 820;
+  font-weight: var(--font-weight-extrabold);
 }
 
 .delete-modal p {
@@ -50,7 +50,7 @@
 .delete-modal-account span {
   color: var(--color-error);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 .delete-modal-account strong,

@@ -28,7 +28,7 @@
   color: var(--color-text-strong);
   font-size: 20px;
   line-height: 28px;
-  font-weight: 820;
+  font-weight: var(--font-weight-extrabold);
 }
 
 .api-edit-modal p {

@@ -43,7 +43,7 @@
 .drawer-section h3 {
   margin: 0;
   color: var(--color-text-strong);
-  font-weight: 820;
+  font-weight: var(--font-weight-extrabold);
 }
 
 .drawer-header p {
@@ -205,7 +205,7 @@
 .import-summary {
   margin: 0 0 10px;
   color: var(--color-text-strong);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 .file-preview-list li,
@@ -295,7 +295,7 @@
 
 .oauth-meta dt {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-strong);
 }
 
@@ -315,13 +315,13 @@
   border-radius: var(--radius-control);
   color: var(--color-primary);
   background: var(--color-control);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   text-decoration: none;
 }
 
 .oauth-ready {
   color: var(--color-success);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 .oauth-warning {

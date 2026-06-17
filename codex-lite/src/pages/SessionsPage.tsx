@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Archive, ArrowLeft, CheckCircle2, CheckSquare, ChevronDown, ChevronRight, EyeOff, Folder, RefreshCw, RotateCcw, Search, Trash2 } from 'lucide-react';
+import { Archive, CheckCircle2, CheckSquare, ChevronDown, ChevronRight, EyeOff, Folder, RefreshCw, RotateCcw, Search, Trash2 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { useCodexSessionsStore } from '../stores/useCodexSessionsStore';
@@ -146,37 +146,27 @@ export function SessionsPage({ onBack }: SessionsPageProps) {
   }
 
   return (
-    <div className="content sessions-content">
-      <section className="sessions-dashboard">
-        {error ? <ErrorBanner error={error} /> : null}
-        <div className="sessions-header">
-          <div>
-            <h2 className="sessions-title">会话管理</h2>
-            <p>查看本机 Codex 历史会话，恢复当前账号可见性，或删除不再需要的记录。</p>
-          </div>
-          <Button variant="secondary" icon={<ArrowLeft size={16} />} onClick={onBack}>
-            返回账号管理
-          </Button>
-        </div>
+    <>
+      {error ? <ErrorBanner error={error} /> : null}
 
-        <div className="sessions-stats" aria-label="Session statistics">
-          <article>
-            <strong>{sessions.length}</strong>
-            <span>全部会话</span>
-          </article>
-          <article>
-            <strong>{visibleCount}</strong>
-            <span>当前可见</span>
-          </article>
-          <article>
-            <strong>{hiddenCount}</strong>
-            <span>待恢复</span>
-          </article>
-          <article>
-            <strong>{selectedCount}</strong>
-            <span>已选择</span>
-          </article>
-        </div>
+      <div className="sessions-stats" aria-label="Session statistics">
+        <article>
+          <strong>{sessions.length}</strong>
+          <span>全部会话</span>
+        </article>
+        <article>
+          <strong>{visibleCount}</strong>
+          <span>当前可见</span>
+        </article>
+        <article>
+          <strong>{hiddenCount}</strong>
+          <span>待恢复</span>
+        </article>
+        <article>
+          <strong>{selectedCount}</strong>
+          <span>已选择</span>
+        </article>
+      </div>
 
         <div className="sessions-toolbar">
           <label className="session-search">
@@ -322,7 +312,6 @@ export function SessionsPage({ onBack }: SessionsPageProps) {
             );
           })}
         </div>
-      </section>
-    </div>
+    </>
   );
 }
