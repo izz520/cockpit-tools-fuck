@@ -72,6 +72,8 @@ pub struct JwtAuthData {
     #[serde(default)]
     pub chatgpt_plan_type: Option<String>,
     #[serde(default)]
+    pub chatgpt_subscription_active_until: Option<String>,
+    #[serde(default)]
     pub chatgpt_account_id: Option<String>,
     #[serde(default)]
     pub account_id: Option<String>,

@@ -145,6 +145,13 @@ fn account_from_import_value(value: &serde_json::Value) -> AppResult<Option<Code
     {
         account.plan_type = Some(plan_type);
     }
+    if let Some(subscription_active_until) = read_string_path(value, &["subscription_active_until"])
+        .or_else(|| read_string_path(value, &["subscriptionActiveUntil"]))
+        .or_else(|| read_string_path(value, &["credentials", "subscription_active_until"]))
+        .or_else(|| read_string_path(value, &["credentials", "subscriptionActiveUntil"]))
+    {
+        account.subscription_active_until = Some(subscription_active_until);
+    }
     if let Some(account_id) = read_string_path(value, &["account_id"])
         .or_else(|| read_string_path(value, &["accountId"]))
         .or_else(|| read_string_path(value, &["credentials", "account_id"]))
@@ -242,6 +249,9 @@ pub fn account_from_auth(auth: CodexAuthFile) -> AppResult<CodexAccount> {
         .or_else(|| extract_account_id_from_payload(Some(&id_payload)));
     let plan_type = extract_plan_type_from_payload(access_payload.as_ref())
         .or_else(|| extract_plan_type_from_payload(Some(&id_payload)));
+    let subscription_active_until =
+        extract_subscription_active_until_from_payload(access_payload.as_ref())
+            .or_else(|| extract_subscription_active_until_from_payload(Some(&id_payload)));
     let id_seed = user_id
         .clone()
         .or_else(|| account_id.clone())
@@ -261,6 +271,7 @@ pub fn account_from_auth(auth: CodexAuthFile) -> AppResult<CodexAccount> {
         account_id,
         user_id,
         plan_type,
+        subscription_active_until,
         token_bundle: Some(TokenBundle {
             id_token: tokens.id_token,
             access_token: tokens.access_token,
@@ -293,6 +304,16 @@ fn extract_account_id_from_payload(payload: Option<&JwtPayload>) -> Option<Strin
 
 fn extract_plan_type_from_payload(payload: Option<&JwtPayload>) -> Option<String> {
     trim_optional_ref(payload?.auth_data.as_ref()?.chatgpt_plan_type.as_deref())
+}
+
+fn extract_subscription_active_until_from_payload(payload: Option<&JwtPayload>) -> Option<String> {
+    trim_optional_ref(
+        payload?
+            .auth_data
+            .as_ref()?
+            .chatgpt_subscription_active_until
+            .as_deref(),
+    )
 }
 
 /// Recovers the ChatGPT account id from an OAuth id_token's claims. Older builds
@@ -379,6 +400,7 @@ fn api_key_account(api_key: String, base_url: Option<String>) -> CodexAccount {
         account_id: None,
         user_id: None,
         plan_type: Some("API_KEY".to_string()),
+        subscription_active_until: None,
         token_bundle: None,
         api_key: Some(api_key),
         api_base_url: base_url,

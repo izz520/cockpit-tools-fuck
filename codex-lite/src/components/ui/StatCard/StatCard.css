@@ -1,11 +1,7 @@
 .stat-card {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
-  grid-template-areas:
-    "icon label"
-    "icon value"
-    "icon meta";
-  align-content: center;
+  align-items: center;
   column-gap: 14px;
   min-height: 94px;
   padding: var(--space-4);
@@ -26,9 +22,9 @@
 }
 
 .stat-icon {
-  grid-area: icon;
   display: grid;
   place-items: center;
+  align-self: center;
   width: 42px;
   height: 42px;
   border-radius: var(--radius-control);
@@ -68,26 +64,41 @@
 }
 
 .stat-label {
-  grid-area: label;
   margin-top: 0;
   color: var(--color-text-strong);
   font-size: 12px;
+  line-height: 16px;
   font-weight: var(--font-weight-extrabold);
 }
 
-.stat-card strong {
-  grid-area: value;
+.stat-copy {
+  display: grid;
+  align-content: center;
+  gap: 1px;
+  min-width: 0;
+}
+
+.stat-value-row {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  min-width: 0;
+}
+
+.stat-value-row strong {
   color: var(--color-text-strong);
   font-size: 28px;
   line-height: 30px;
   font-weight: var(--font-weight-extrabold);
+  font-variant-numeric: tabular-nums;
 }
 
 .stat-meta {
-  grid-area: meta;
   color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: var(--font-weight-semibold);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
 }
 
 @media (max-width: 520px) {
@@ -103,7 +114,7 @@
     height: 40px;
   }
 
-  .stat-card strong {
+  .stat-value-row strong {
     font-size: 26px;
     line-height: 28px;
   }

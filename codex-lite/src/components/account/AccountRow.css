@@ -21,27 +21,27 @@
 }
 
 .account-card.current {
-  border-color: oklch(0.65 0.15 195 / 0.5);
-  background: linear-gradient(135deg,
-    oklch(0.96 0.03 195 / 0.8),
-    oklch(0.97 0.02 200 / 0.75));
+  border-color: oklch(0.68 0.12 195 / 0.34);
+  background:
+    linear-gradient(135deg, oklch(0.98 0.015 195 / 0.64), oklch(1 0 0 / 0.82)),
+    var(--glass-light);
   box-shadow:
-    0 0 0 1px oklch(0.6 0.15 195 / 0.4),
-    0 12px 32px oklch(0.5 0.15 195 / 0.15),
+    0 0 0 1px oklch(0.68 0.12 195 / 0.16),
+    0 8px 22px oklch(0.45 0.08 195 / 0.09),
     var(--shadow-glass-inset);
 }
 
 .account-card.current::after {
   position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 8px;
-  height: 8px;
+  top: 16px;
+  right: 16px;
+  width: 7px;
+  height: 7px;
   border-radius: 999px;
   background: var(--color-success);
-  box-shadow: 0 0 0 4px oklch(0.94 0.07 151 / 0.8), 0 2px 8px oklch(0.6 0.16 151 / 0.4);
+  box-shadow: 0 0 0 3px oklch(0.94 0.07 151 / 0.62);
   content: "";
-  animation: pulse 2s ease-in-out infinite;
+  animation: pulse 2.8s ease-in-out infinite;
 }
 
 @keyframes pulse {
@@ -457,12 +457,10 @@
 }
 
 .account-card-actions .icon-button.active {
-  border-color: transparent;
-  background: linear-gradient(135deg,
-    oklch(0.6 0.15 195),
-    oklch(0.55 0.16 200));
-  color: white;
-  box-shadow: 0 8px 14px oklch(0.5 0.15 195 / 0.25);
+  border-color: oklch(0.68 0.12 195 / 0.28);
+  background: oklch(0.92 0.055 195 / 0.82);
+  color: var(--color-primary-active);
+  box-shadow: var(--shadow-sm), inset 0 1px 1px oklch(1 0 0 / 0.68);
 }
 
 .account-card-mode {

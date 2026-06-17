@@ -20,18 +20,37 @@ interface AccountRowProps {
   onReauthenticate: (accountId: string) => void;
 }
 
-function formatTimestamp(value?: number | null): string {
-  if (!value) {
-    return '从未使用';
-  }
-  return new Date(value * 1000).toLocaleDateString();
-}
-
-function formatReset(value?: number | null): string | null {
+function parseSubscriptionTimestamp(value?: string | null): number | null {
   if (!value) {
     return null;
   }
-  return new Date(value * 1000).toLocaleString();
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const numeric = Number(trimmed);
+  if (Number.isFinite(numeric)) {
+    return numeric > 10_000_000_000 ? numeric : numeric * 1000;
+  }
+  const parsed = Date.parse(trimmed);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function formatExpiry(value?: string | null): string | null {
+  const timestamp = parseSubscriptionTimestamp(value);
+  if (!timestamp) {
+    return null;
+  }
+  return new Date(timestamp).toLocaleString();
+}
+
+function formatRemainingDays(value?: string | null): string {
+  const timestamp = parseSubscriptionTimestamp(value);
+  if (!timestamp) {
+    return '-';
+  }
+  const msRemaining = timestamp - Date.now();
+  return String(Math.max(0, Math.ceil(msRemaining / 86_400_000)));
 }
 
 function formatQuotaLabel(value?: number | null): string {
@@ -129,6 +148,9 @@ export function AccountRow({
   const canReauthenticate = canReauthenticateAccount(account);
   const hasQuotaError = account.quotaError !== null && account.quotaError !== undefined;
   const quotaErrorSummary = account.quotaError ? getQuotaErrorSummary(account.quotaError) : null;
+  const expiresAt = account.subscriptionActiveUntil ?? null;
+  const validityDays = formatRemainingDays(expiresAt);
+  const expiresAtText = formatExpiry(expiresAt) ?? '未获取到期时间';
 
   async function copyField(field: 'apiKey' | 'apiBaseUrl', value: string) {
     if (!value) {
@@ -250,9 +272,9 @@ export function AccountRow({
           <span className="account-validity">
             <span>
               <CalendarDays size={15} />
-              有效期 30 天
+              有效期 {validityDays} 天
             </span>
-            <span>{formatReset(account.quota?.weeklyResetAt) ?? formatTimestamp(account.lastUsedAt)}</span>
+            <span>{expiresAtText}</span>
           </span>
         ) : null}
       </div>

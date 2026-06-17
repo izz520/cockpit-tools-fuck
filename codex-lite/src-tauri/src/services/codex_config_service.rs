@@ -352,6 +352,7 @@ mod tests {
             account_id: None,
             user_id: None,
             plan_type: Some("API_KEY".to_string()),
+            subscription_active_until: None,
             token_bundle: None,
             api_key: Some("sk-test".to_string()),
             api_base_url: Some("https://api.yaso11.tech".to_string()),

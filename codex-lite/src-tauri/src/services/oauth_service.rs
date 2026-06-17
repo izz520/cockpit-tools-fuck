@@ -616,6 +616,7 @@ fn refreshed_account_from_token_response(
             refreshed.account_id = parsed.account_id;
             refreshed.user_id = parsed.user_id;
             refreshed.plan_type = parsed.plan_type;
+            refreshed.subscription_active_until = parsed.subscription_active_until;
             if refreshed.display_name == "Codex OAuth Account" {
                 refreshed.display_name = parsed.display_name;
             }

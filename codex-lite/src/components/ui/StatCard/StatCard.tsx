@@ -15,9 +15,13 @@ export function StatCard({ icon, iconColor = 'primary', label, value, meta }: St
       <span className={`stat-icon stat-icon-${iconColor}`} aria-hidden="true">
         {icon}
       </span>
-      <span className="stat-label">{label}</span>
-      <strong>{value}</strong>
-      {meta ? <span className="stat-meta">{meta}</span> : null}
+      <span className="stat-copy">
+        <span className="stat-label">{label}</span>
+        <span className="stat-value-row">
+          <strong>{value}</strong>
+          {meta ? <span className="stat-meta">{meta}</span> : null}
+        </span>
+      </span>
     </article>
   );
 }
